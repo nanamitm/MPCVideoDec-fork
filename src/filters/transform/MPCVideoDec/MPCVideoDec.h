@@ -35,8 +35,8 @@
 
 #include "./MSDKDecoder/MSDKDecoder.h"
 
-#define MPCVideoDecName L"MPC Video Decoder"
-#define MPCVideoConvName L"MPC Video Converter"
+#define MPCVideoDecName L"MPC Video Decoder (nanamitm)"
+#define MPCVideoConvName L"MPC Video Converter (nanamitm)"
 
 struct AVCodec;
 struct AVCodecContext;
@@ -46,7 +46,10 @@ struct AVPacket;
 struct AVBufferRef;
 class CD3D11Decoder;
 
-class __declspec(uuid("008BAC12-FBAF-497b-9670-BC6F6FBAE2C4"))
+// Own CLSID, distinct from upstream MPC-BE's, so this fork's standalone
+// MPCVideoDec.ax doesn't collide in the registry with an official build
+// registered on the same machine.
+class __declspec(uuid("CF5BCE2D-7D53-4D8A-BFF9-DD7E57492DC6"))
 	CMPCVideoDecFilter
 	: public CBaseVideoFilter
 	, public IMPCVideoDecFilter

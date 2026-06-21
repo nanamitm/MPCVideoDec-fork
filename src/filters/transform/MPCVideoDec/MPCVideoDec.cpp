@@ -1008,7 +1008,7 @@ const AMOVIESETUP_PIN sudpPinsUncompressed[] = {
 	{(LPWSTR)L"Output", FALSE, TRUE, FALSE, FALSE, &CLSID_NULL, nullptr, std::size(sudPinTypesOut), sudPinTypesOut}
 };
 
-CLSID Converter_clsID = GUIDFromCString(L"{0B7FA55E-FA38-4671-A2F2-B8F300C955C4}");
+CLSID Converter_clsID = GUIDFromCString(L"{B20A7CA8-546A-4049-B490-F9B6AA906636}");
 
 const AMOVIESETUP_FILTER sudFilters[] = {
 	{&__uuidof(CMPCVideoDecFilter), MPCVideoDecName, MERIT_NORMAL + 1, std::size(sudpPins), sudpPins, CLSID_LegacyAmFilterCategory},

@@ -60,7 +60,7 @@ enum {
 	IDC_PP_RESET,
 };
 
-class __declspec(uuid("D5AA0389-D274-48e1-BF50-ACB05A56DDE0"))
+class __declspec(uuid("5A475F68-643B-4295-9B9D-2EAF8071F72E"))
 	CMPCVideoDecSettingsWnd : public CInternalPropertyPageWnd
 {
 	CComQIPtr<IMPCVideoDecFilter> m_pMDF;
@@ -148,7 +148,7 @@ public:
 };
 
 #ifdef REGISTER_FILTER
-class __declspec(uuid("3C395D46-8B0F-440d-B962-2F4A97355453"))
+class __declspec(uuid("66E921E0-3B62-443E-982A-1A7C64D43FE8"))
 	CMPCVideoDecCodecWnd : public CInternalPropertyPageWnd
 {
 	CComQIPtr<IMPCVideoDecFilter> m_pMDF;
