@@ -20,14 +20,13 @@ broadcast streams in [TVTest](https://github.com/DBCTRADO/TVTest):
 - **Spurious `EC_DISPLAY_CHANGED` on every output format change**, which
   makes the default DirectShow filter graph manager stop and restart the
   whole graph, occasionally leaving D3D11 device creation in a bad state
-  (no video on startup or after a renderer switch). Reported as
-  [Aleksoid1978/MPC-BE#1165](https://github.com/Aleksoid1978/MPC-BE/pull/1165);
-  upstream closed it without merging or shipping an alternative fix, so it's
-  only fixed here.
+  (no video on startup or after a renderer switch). Proposed in
+  [Aleksoid1978/MPC-BE#1165](https://github.com/Aleksoid1978/MPC-BE/pull/1165),
+  but the maintainer wasn't convinced it was the right fix, so for now it
+  only lives here.
 
-Since further upstreaming wasn't going anywhere, this fork now develops and
-distributes its own MPCVideoDec.ax independently instead of tracking
-upstream for future PRs.
+This fork now develops and distributes its own MPCVideoDec.ax
+independently, rather than continuing to open PRs upstream for it.
 
 ## Getting the decoder
 
