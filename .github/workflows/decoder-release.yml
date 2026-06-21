@@ -1,0 +1,62 @@
+name: Build and release MPCVideoDec.ax
+
+# Standalone-decoder distribution for this fork's own fixes that upstream
+# (Aleksoid1978/MPC-BE) didn't take - see:
+#   https://github.com/Aleksoid1978/MPC-BE/pull/1165
+# Builds only the MPCVideoDec filter (x64), not the rest of MPC-BE.
+
+on:
+  push:
+    branches: [decoder-release]
+    tags: ['decoder-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Prepare MSYS
+        run: |
+          curl -sSL https://github.com/Aleksoid1978/MSYS/raw/main/MSYS_MinGW-w64_GCC_1521_x86-x64.7z -o MSYS.7z
+          7z x MSYS.7z -oC:\\MSYS
+          echo '@ECHO OFF' > environments.bat
+          echo 'SET "MPCBE_MSYS=C:\\MSYS"' >> environments.bat
+          echo 'SET "MPCBE_MINGW=C:\\MSYS\\mingw"' >> environments.bat
+          .\\update_gcc.bat
+        shell: pwsh
+
+      - name: Build MPCVideoDec (x64 Release)
+        run: |
+          .\\build.bat Build x64 Filters Release NoWait
+        shell: pwsh
+
+      - name: Stage release files
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item _bin\Filters_x64\MPCVideoDec.ax dist\
+          Copy-Item _bin\Filters_x64\MPCVideoDec.pdb dist\ -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: MPCVideoDec-x64
+          path: dist/*
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/decoder-v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          generate_release_notes: true
