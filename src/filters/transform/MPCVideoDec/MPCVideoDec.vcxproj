@@ -70,38 +70,6 @@
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ProjectReference />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ProjectReference />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ProjectReference />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ProjectReference />
-  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="D3D11Decoder\D3D11Decoder.cpp" />
     <ClCompile Include="D3D11Decoder\D3D11SurfaceAllocator.cpp" />
@@ -144,16 +112,12 @@
     <ClInclude Include="MSDKDecoder\growarray.h" />
     <ClInclude Include="MSDKDecoder\MSDKDecoder.h" />
     <ClInclude Include="pixconv\pixconv_internal.h" />
-    <ClInclude Include="resource.h">
-      <ExcludedFromBuild Condition="'$(Configuration)'=='Debug' or '$(Configuration)'=='Release'">true</ExcludedFromBuild>
-    </ClInclude>
+    <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="DxgiUtils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MPCVideoDec.rc">
-      <ExcludedFromBuild Condition="'$(Configuration)'=='Debug' or '$(Configuration)'=='Release'">true</ExcludedFromBuild>
-    </ResourceCompile>
+    <ResourceCompile Include="MPCVideoDec.rc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)src\DSUtil\DSUtil.vcxproj">
