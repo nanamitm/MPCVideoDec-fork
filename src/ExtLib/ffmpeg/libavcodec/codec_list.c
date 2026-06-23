@@ -164,12 +164,11 @@ static const FFCodec * const codec_list[] = {
     &ff_adpcm_xa_decoder,
     &ff_adpcm_yamaha_decoder,
 
-    &ff_libdav1d_decoder,
     &ff_libspeex_decoder,
     &ff_libuavs3d_decoder,
     &ff_libfdk_aac_decoder,
 
-    &ff_av1_decoder, // after ff_libdav1d_decoder
+    &ff_av1_decoder,
     &ff_libvvdec_decoder,
     NULL
 };

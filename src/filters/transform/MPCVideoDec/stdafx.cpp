@@ -23,5 +23,4 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "version.lib")
 
-#pragma comment(lib, "libdav1d.a")
 #pragma comment(lib, "fdk-aac.lib")
