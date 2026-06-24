@@ -25,6 +25,7 @@ extern "C" {
 	#include <ExtLib/ffmpeg/libavcodec/defs.h>
 }
 #include "DxgiUtils.h"
+#include "filters/filters/DarkMode.h"
 
 namespace {
 	constexpr UINT PCI_VENDOR_NVIDIA = 0x10DE;
@@ -672,10 +673,10 @@ void CMPCVideoDecSettingsWnd::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItem
 	const bool bAvailable = bHasItem && m_HWDecAvailable[itemID];
 	const bool bSelected  = bAvailable && (lpDrawItemStruct->itemState & ODS_SELECTED);
 
-	const COLORREF clrBack = bSelected ? ::GetSysColor(COLOR_HIGHLIGHT) : ::GetSysColor(COLOR_WINDOW);
+	const COLORREF clrBack = bSelected ? ::GetSysColor(COLOR_HIGHLIGHT) : MPCDarkMode::BackColor(IsDarkMode());
 	const COLORREF clrText = bSelected  ? ::GetSysColor(COLOR_HIGHLIGHTTEXT)
-						   : bAvailable ? ::GetSysColor(COLOR_WINDOWTEXT)
-						   :              ::GetSysColor(COLOR_GRAYTEXT);
+						   : bAvailable ? MPCDarkMode::TextColor(IsDarkMode())
+						   :              MPCDarkMode::GrayTextColor(IsDarkMode());
 
 	CBrush brush(clrBack);
 	dc.FillRect(&lpDrawItemStruct->rcItem, &brush);
@@ -786,11 +787,59 @@ bool CMPCVideoDecCodecWnd::OnActivate()
 		pWnd->SetFont(&m_font, FALSE);
 	}
 
+	m_lstCodecs.SetDarkMode(IsDarkMode());
+
 	return true;
 }
 
 void CMPCVideoDecCodecWnd::OnDeactivate()
 {
+}
+
+void CMPCVideoDecCodecWnd::OnDarkModeChanged(bool fDarkMode)
+{
+	m_lstCodecs.SetDarkMode(fDarkMode);
+	m_lstCodecs.Invalidate();
+}
+
+void CMPCDarkCodecListBox::SetDarkMode(bool fDark)
+{
+	m_fDark = fDark;
+	if (m_hWnd) {
+		::SetWindowTheme(m_hWnd, fDark ? L"DarkMode_Explorer" : nullptr, nullptr);
+	}
+}
+
+// CCheckListBox's actual WM_DRAWITEM handler is the non-virtual PreDrawItem()
+// (see atlmfc/src/mfc/winctrl3.cpp), which already draws the checkbox glyph
+// itself - via OpenThemeData(m_hWnd, L"Button"), so it already follows
+// SetDarkMode()'s SetWindowTheme() call - then shrinks rcItem.left past it
+// before calling this virtual override. So this only needs to draw the
+// (already checkbox-excluded) label, same as the base DrawItem(), just with
+// dark-mode-aware colors instead of GetSysColor().
+void CMPCDarkCodecListBox::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+	CDC* pDC = CDC::FromHandle(lpDrawItemStruct->hDC);
+	CRect rcItem(lpDrawItemStruct->rcItem);
+	const bool fSelected = (lpDrawItemStruct->itemState & ODS_SELECTED) != 0;
+
+	CString strText;
+	GetText(lpDrawItemStruct->itemID, strText);
+
+	const COLORREF clrBack = fSelected ? ::GetSysColor(COLOR_HIGHLIGHT) : MPCDarkMode::BackColor(m_fDark);
+	const COLORREF clrText = fSelected ? ::GetSysColor(COLOR_HIGHLIGHTTEXT) : MPCDarkMode::TextColor(m_fDark);
+
+	pDC->FillSolidRect(&rcItem, clrBack);
+
+	const COLORREF clrOldText = pDC->SetTextColor(clrText);
+	const int oldBkMode = pDC->SetBkMode(TRANSPARENT);
+	pDC->DrawText(strText, &rcItem, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+	pDC->SetBkMode(oldBkMode);
+	pDC->SetTextColor(clrOldText);
+
+	if (lpDrawItemStruct->itemState & ODS_FOCUS) {
+		pDC->DrawFocusRect(&rcItem);
+	}
 }
 
 bool CMPCVideoDecCodecWnd::OnApply()

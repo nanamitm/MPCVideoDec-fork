@@ -156,14 +156,28 @@ public:
 };
 
 #ifdef REGISTER_FILTER
+// CCheckListBox::DrawItem() paints each item itself using GetSysColor(),
+// bypassing WM_CTLCOLORLISTBOX entirely, so the only way to recolor it for
+// dark mode is to override the drawing ourselves.
+class CMPCDarkCodecListBox : public CCheckListBox
+{
+	bool m_fDark = false;
+
+public:
+	void SetDarkMode(bool fDark);
+
+protected:
+	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct) override;
+};
+
 class __declspec(uuid("66E921E0-3B62-443E-982A-1A7C64D43FE8"))
 	CMPCVideoDecCodecWnd : public CInternalPropertyPageWnd
 {
 	CComQIPtr<IMPCVideoDecFilter> m_pMDF;
 
-	CButton			m_grpSelectedCodec;
-	CCheckListBox	m_lstCodecs;
-	CImageList		m_onoff;
+	CButton				m_grpSelectedCodec;
+	CMPCDarkCodecListBox	m_lstCodecs;
+	CImageList			m_onoff;
 
 public:
 	CMPCVideoDecCodecWnd() = default;
@@ -174,6 +188,7 @@ public:
 	bool OnActivate();
 	void OnDeactivate();
 	bool OnApply();
+	void OnDarkModeChanged(bool fDarkMode) override;
 
 	static LPCWSTR GetWindowTitle() { return L"Codecs";    }
 	static CSize GetWindowSize()    { return CSize(340, 290); }

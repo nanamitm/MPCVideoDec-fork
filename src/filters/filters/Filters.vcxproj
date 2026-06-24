@@ -51,6 +51,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DarkMode.cpp" />
     <ClCompile Include="Filters.cpp" />
     <ClCompile Include="InternalPropertyPage.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -58,6 +59,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DarkMode.h" />
     <ClInclude Include="FilterInterfacesImpl.h" />
     <ClInclude Include="Filters.h" />
     <ClInclude Include="InternalPropertyPage.h" />

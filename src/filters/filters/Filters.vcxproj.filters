@@ -11,6 +11,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DarkMode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Filters.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -22,6 +25,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DarkMode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Filters.h">
       <Filter>Header Files</Filter>
     </ClInclude>

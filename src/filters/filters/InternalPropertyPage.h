@@ -24,6 +24,7 @@
 #include <afxcmn.h>
 #include <map>
 #include <HighDPI.h>
+#include "DarkMode.h"
 
 interface __declspec(uuid("03481710-D73E-4674-839F-03EDE2D60ED8"))
 ISpecifyPropertyPages2 :
@@ -36,14 +37,28 @@ class CInternalPropertyPageWnd : public CWnd, public CDPI
 	bool m_fDirty;
 	CComPtr<IPropertyPageSite> m_pPageSite;
 
+	void UpdateDarkModeBrushes();
+
 protected:
 	CFont m_font, m_monospacefont;
 	int m_fontheight;
+
+	bool m_fDarkMode = false;
+	CBrush m_BackBrush;
+	CBrush m_FaceBrush;
 
 	// border: 0 - static or edit text without edges, 2 - radio bottom, 6 - edit text with edges
 	void CalcTextRect(CRect& rect, long x, long y, long w, long border = 0);
 	void CalcRect(CRect& rect, long x, long y, long w, long h);
 	virtual BOOL OnWndMsg(UINT message, WPARAM wParam, LPARAM lParam, LRESULT* pResult);
+
+	// Hook for derived pages that own controls ApplyDarkMode() can't reach
+	// generically (e.g. an owner-draw list box that paints its own items).
+	virtual void OnDarkModeChanged(bool fDarkMode) {}
+
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
 
 public:
 	CInternalPropertyPageWnd();
@@ -59,6 +74,14 @@ public:
 		}
 	}
 	bool GetDirty() { return m_fDirty; }
+
+	bool IsDarkMode() const { return m_fDarkMode; }
+
+	// Re-themes the page's child controls for the current m_fDarkMode. Called
+	// once (by CInternalPropertyPage::Activate()) after OnActivate() builds
+	// the controls, and again from OnSettingChange() if the OS dark/light
+	// setting changes live.
+	void ApplyDarkMode();
 
 	virtual BOOL Create(IPropertyPageSite* pPageSite, LPCRECT pRect, CWnd* pParentWnd);
 
