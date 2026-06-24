@@ -24,6 +24,7 @@
 #include "filters/filters/FilterInterfacesImpl.h"
 #include "IMPCVideoDec.h"
 #include "MPCVideoDecSettingsWnd.h"
+#include "MPCVideoDecStatusShare.h"
 #include "./DXVADecoder/DXVA2Decoder.h"
 #include "FormatConverter.h"
 #include "apps/mplayerc/FilterEnum.h"
@@ -68,6 +69,8 @@ private:
 
 	CCritSec								m_csInitDec;
 	CCritSec								m_csProps;
+	CMPCVideoDecStatusPublisher				m_statusPublisher;
+	ULONGLONG								m_statusPublishTick = 0;
 	// === Persistants parameters (registry)
 	int										m_nThreadNumber = 0;
 	MPC_SCAN_TYPE							m_nScanType = SCAN_AUTO;

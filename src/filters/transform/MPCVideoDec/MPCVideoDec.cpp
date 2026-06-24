@@ -4321,6 +4321,19 @@ HRESULT CMPCVideoDecFilter::Transform(IMediaSample* pIn)
 
 	m_bDecodingStart = TRUE;
 
+	// Active decoder/output format only settle once decoding is actually
+	// underway (DXVA negotiation, software fallback, etc. all happen after
+	// SetMediaType()/InitDecoder() return) - the same reason the property
+	// page itself polls GetInformation() on a timer rather than reading it
+	// once. Piggyback on Transform() instead of adding a dedicated thread,
+	// throttled to roughly the property page's own 500ms refresh rate.
+	const ULONGLONG tick = GetTickCount64();
+	if (tick - m_statusPublishTick >= 500) {
+		m_statusPublishTick = tick;
+		m_statusPublisher.Publish(GetInformation(INFO_InputFormat), GetInformation(INFO_FrameSize),
+								   GetInformation(INFO_OutputFormat), GetInformation(INFO_ActiveDecoder), GetInformation(INFO_GraphicsAdapter));
+	}
+
 	return hr;
 }
 
