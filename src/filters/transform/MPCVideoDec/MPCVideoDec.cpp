@@ -75,7 +75,7 @@ extern "C" {
 #include "Version.h"
 
 // option names
-#define OPT_REGKEY_VideoDec  L"Software\\MPC-BE Filters\\MPC Video Decoder"
+#define OPT_REGKEY_VideoDec  L"Software\\nanamitm Filters\\MPC Video Decoder"
 #define OPT_SECTION_VideoDec L"Filters\\MPC Video Decoder"
 #define OPT_ThreadNumber     L"ThreadNumber"
 #define OPT_DiscardMode      L"DiscardMode"
@@ -106,7 +106,7 @@ static_assert(std::size(hwdec_opt_names) == HWCodec_count, "bad hwdec_opt_names!
 #pragma region any_constants
 
 #ifdef REGISTER_FILTER
-#define OPT_REGKEY_VCodecs   L"Software\\MPC-BE Filters\\MPC Video Decoder\\Codecs"
+#define OPT_REGKEY_VCodecs   L"Software\\nanamitm Filters\\MPC Video Decoder\\Codecs"
 
 static const struct vcodec_t {
 	const LPCWSTR          opt_name;

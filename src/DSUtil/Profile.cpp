@@ -43,7 +43,7 @@ CStringW GetIniUserProfile()
 	PWSTR pathRoamingAppData = nullptr;
 	HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &pathRoamingAppData);
 	if (SUCCEEDED(hr)) {
-		path = CStringW(pathRoamingAppData) + L"\\MPC-BE\\" + fname;
+		path = CStringW(pathRoamingAppData) + L"\\nanamitm\\" + fname;
 	}
 	CoTaskMemFree(pathRoamingAppData);
 
@@ -76,7 +76,7 @@ LONG CProfile::OpenRegistryKey()
 
 	if (!m_hAppRegKey) {
 		DWORD dwDisposition = 0;
-		lResult = RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\MPC-BE", 0, nullptr, 0, KEY_READ, nullptr, &m_hAppRegKey, &dwDisposition);
+		lResult = RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\nanamitm", 0, nullptr, 0, KEY_READ, nullptr, &m_hAppRegKey, &dwDisposition);
 		DLogIf(lResult != ERROR_SUCCESS, L"OpenRegistryKey(): ERROR! The opening of the registry key failed.");
 	}
 
@@ -1052,7 +1052,7 @@ void CProfile::Flush(bool bForce)
 	CStdioFile file(fp);
 	CStringW line;
 	try {
-		file.WriteString(L"; MPC-BE\n");
+		file.WriteString(L"; nanamitm\n");
 		for (auto it1 = m_ProfileMap.begin(); it1 != m_ProfileMap.end(); ++it1) {
 			line.Format(L"[%s]\n", it1->first);
 			file.WriteString(line);

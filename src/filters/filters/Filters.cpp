@@ -39,7 +39,7 @@ BOOL CFilterApp::InitInstance()
 		return FALSE;
 	}
 
-	SetRegistryKey(L"MPC-BE");
+	SetRegistryKey(L"nanamitm");
 
 	DllEntryPoint(AfxGetInstanceHandle(), DLL_PROCESS_ATTACH, 0);
 
