@@ -1,7 +1,8 @@
 @echo off
 @cd /d "%~dp0"
-@set "FILTER_PATH=%~dp0..\_bin\Filters_x64\MPCVideoDec-fork.ax"
+@set "FILTER_PATH=%~dp0MPCVideoDec-fork.ax"
 @if not exist "%FILTER_PATH%" goto missing
+:install
 @regsvr32.exe "%FILTER_PATH%" /s
 @if %errorlevel% NEQ 0 goto error
 :success
@@ -9,9 +10,8 @@
 @echo.
 @echo    Installation succeeded.
 @echo.
-@echo    Please do not delete MPCVideoDec-fork.ax.
+@echo    Please do not delete "%FILTER_PATH%".
 @echo    The installer has not copied the file anywhere.
-@echo    Keep the built filter under _bin\Filters_x64.
 @echo.
 @goto done
 :missing
@@ -19,8 +19,8 @@
 @echo.
 @echo    Installation failed.
 @echo.
-@echo    "%FILTER_PATH%" was not found.
-@echo    Build the x64 Release filter first.
+@echo    MPCVideoDec-fork.ax was not found.
+@echo    Put the script in the same folder as MPCVideoDec-fork.ax.
 @echo.
 @goto done
 :error

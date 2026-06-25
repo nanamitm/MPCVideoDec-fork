@@ -1,7 +1,8 @@
 @echo off
 @cd /d "%~dp0"
-@set "FILTER_PATH=%~dp0..\_bin\Filters_x64\MPCVideoDec-fork.ax"
+@set "FILTER_PATH=%~dp0MPCVideoDec-fork.ax"
 @if not exist "%FILTER_PATH%" goto missing
+:uninstall
 @regsvr32.exe "%FILTER_PATH%" /u /s
 @if %errorlevel% NEQ 0 goto error
 :success
@@ -15,8 +16,8 @@
 @echo.
 @echo    Uninstallation failed.
 @echo.
-@echo    "%FILTER_PATH%" was not found.
-@echo    Make sure the built filter still exists under _bin\Filters_x64.
+@echo    MPCVideoDec-fork.ax was not found.
+@echo    Put the script in the same folder as MPCVideoDec-fork.ax.
 @echo.
 @goto done
 :error
