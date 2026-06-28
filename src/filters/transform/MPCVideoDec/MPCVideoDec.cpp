@@ -3727,6 +3727,7 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 	}
 
 	int ret = avcodec_send_packet(m_pAVCtx, avpkt);
+	const bool bPacketNeedsRetry = (ret == AVERROR(EAGAIN));
 	if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
 		if (ret == AVERROR_INVALIDDATA) {
 			return S_FALSE;
@@ -3847,6 +3848,7 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 		int h = frame->height;
 
 		if (FAILED(hr = GetDeliveryBuffer(w, h, &pOut, GetFrameDuration(), &dxvaExtFormat)) || FAILED(hr = pOut->GetPointer(&pDataOut))) {
+			DLog(L"CMPCVideoDecFilter::DecodeInternal(): GetDeliveryBuffer failed hr=0x%08X (%dx%d) — decoded frame dropped", hr, w, h);
 			av_frame_unref(frame);
 			continue;
 		}
@@ -4046,6 +4048,12 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 		av_frame_unref(frame);
 
 		m_bDecoderAcceptFormat = TRUE;
+	}
+
+	if (bPacketNeedsRetry) {
+		ret = avcodec_send_packet(m_pAVCtx, avpkt);
+		DLogIf(ret < 0 && ret != AVERROR_EOF,
+			L"CMPCVideoDecFilter::DecodeInternal(): retry after EAGAIN failed: %S", AVError2Str(ret));
 	}
 
 	return S_OK;
