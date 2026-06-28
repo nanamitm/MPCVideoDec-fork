@@ -113,6 +113,11 @@ static const struct {
 static_assert(std::size(hwdec_opt_names) == HWCodec_count, "bad hwdec_opt_names!");
 static_assert(std::size(hwdecoder_names) == HWDec_count, "bad hwdecoder_names!");
 
+static MPCHwDecoder DefaultHwDecoder()
+{
+	return SysVersion::IsWin8orLater() ? HWDec_D3D11 : HWDec_DXVA2;
+}
+
 static LPCWSTR GetHwDecoderName(const MPCHwDecoder hwDecoder)
 {
 	for (const auto& item : hwdecoder_names) {
@@ -132,7 +137,7 @@ static MPCHwDecoder GetHwDecoderByName(LPCWSTR name)
 		}
 	}
 
-	return SysVersion::IsWin8orLater() ? HWDec_D3D11 : HWDec_DXVA2;
+	return DefaultHwDecoder();
 }
 
 #define MAX_AUTO_THREADS 32

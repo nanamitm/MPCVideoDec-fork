@@ -59,6 +59,11 @@ namespace {
 		return CB_ERR;
 	}
 
+	MPCHwDecoder DefaultHwDecoder()
+	{
+		return SysVersion::IsWin8orLater() ? HWDec_D3D11 : HWDec_DXVA2;
+	}
+
 	MPCHwDecoder GetSelectedHWDecoder(const CComboBox& combo)
 	{
 		const int sel = combo.GetCurSel();
@@ -66,7 +71,7 @@ namespace {
 			return (MPCHwDecoder)combo.GetItemData(sel);
 		}
 
-		return SysVersion::IsWin8orLater() ? HWDec_D3D11 : HWDec_DXVA2;
+		return DefaultHwDecoder();
 	}
 }
 
@@ -610,7 +615,7 @@ void CMPCVideoDecSettingsWnd::OnBnClickedReset()
 		m_cbHWCodec[i].SetCheck(BST_CHECKED);
 	}
 
-	const int hwDecoderIndex = FindHWDecoderComboIndex(m_cbHWDecoder, SysVersion::IsWin8orLater() ? HWDec_D3D11 : HWDec_DXVA2);
+	const int hwDecoderIndex = FindHWDecoderComboIndex(m_cbHWDecoder, DefaultHwDecoder());
 	m_cbHWDecoder.SetCurSel(hwDecoderIndex != CB_ERR ? hwDecoderIndex : 0);
 	m_cbHWAdapter.SetCurSel(0);
 	m_iD3D11Adapter = 0;
