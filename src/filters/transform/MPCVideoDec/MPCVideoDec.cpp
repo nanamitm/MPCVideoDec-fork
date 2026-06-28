@@ -126,7 +126,13 @@ static LPCWSTR GetHwDecoderName(const MPCHwDecoder hwDecoder)
 		}
 	}
 
-	return hwdecoder_names[SysVersion::IsWin8orLater() ? HWDec_D3D11 : HWDec_DXVA2].name;
+	// Unreachable: all MPCHwDecoder values are covered by hwdecoder_names (enforced by static_assert above).
+	// Search by value so the result does not depend on array ordering.
+	const MPCHwDecoder def = DefaultHwDecoder();
+	for (const auto& item : hwdecoder_names) {
+		if (item.value == def) { return item.name; }
+	}
+	return hwdecoder_names[0].name;
 }
 
 static MPCHwDecoder GetHwDecoderByName(LPCWSTR name)
