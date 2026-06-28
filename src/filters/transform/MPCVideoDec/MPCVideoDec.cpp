@@ -1179,7 +1179,7 @@ CMPCVideoDecFilter::CMPCVideoDecFilter(LPUNKNOWN lpunk, HRESULT* phr)
 			}
 		}
 		len = std::size(buff);
-		if (ERROR_SUCCESS == key.QueryStringValue(OPT_HwDecoder, buff, &len) && len > 0) {
+		if (ERROR_SUCCESS == key.QueryStringValue(OPT_HwDecoder, buff, &len) && len > 1) {
 			m_nHwDecoder = GetHwDecoderByName(buff);
 		}
 		len = std::size(buff);
