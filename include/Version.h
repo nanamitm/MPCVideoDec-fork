@@ -38,7 +38,7 @@
 #define REV_BRANCH     LOCAL
 #endif
 
-#define MPC_VERSION_REV         7
+#define MPC_VERSION_REV         8
 
 #define DO_MAKE_STR(x)          #x
 #define MAKE_STR(x)             DO_MAKE_STR(x)
@@ -56,7 +56,7 @@
 #ifndef ISPP_INVOKED
 
 #define MPC_COMP_NAME_STR       L"nanamitm (MPC-BE fork)"
-#define MPC_COPYRIGHT_STR       L"Copyright © 2002-2026 all contributors, see Authors.txt"
+#define MPC_COPYRIGHT_STR       L"Copyright ï¿½ 2002-2026 all contributors, see Authors.txt"
 
 #define MPC_VERSION_FULL_NUM    MPC_VERSION_MAJOR,MPC_VERSION_MINOR,MPC_VERSION_PATCH,MPC_VERSION_REV
 #define MPC_VERSION_FULL_STR    MAKE_STR(MPC_VERSION_MAJOR) "." MAKE_STR(MPC_VERSION_MINOR) "." MAKE_STR(MPC_VERSION_PATCH) "." MAKE_STR(MPC_VERSION_REV)
