@@ -4101,6 +4101,11 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 			}
 			av_frame_unref(frame);
 			m_bDecoderAcceptFormat = TRUE;
+			// If the decoder was just flagged for a flush, break instead of
+			// continuing: calling avcodec_receive_frame() again with corrupted
+			// internal state causes the crash we are trying to prevent.
+			if (m_bHEVCFlushAfterFrame)
+				break;
 			continue;
 		}
 
