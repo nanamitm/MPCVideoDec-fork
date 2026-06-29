@@ -22,7 +22,7 @@
 
 #include <mutex>
 
-//#define _DEBUG_LOGFILE // Allow output to the log file
+#define _DEBUG_LOGFILE // Allow output to the log file
 
 #ifdef _DEBUG_LOGFILE
 #include <ShlObj_core.h>
