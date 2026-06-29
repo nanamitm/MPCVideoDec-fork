@@ -3921,15 +3921,15 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 		}
 	}
 
-	// Flush HEVC decoder when RPS errors accumulate to prevent an internal crash.
-	// AV_FRAME_FLAG_CORRUPT is not set by the HEVC decoder in this error path,
-	// so we count via the ff_log callback instead.
+	// After delivering a frame that was preceded by many RPS errors, flush the
+	// decoder before sending the next packet. The crash pattern is:
+	//   [many RPS errors] -> [one frame output] -> [crash on next decode]
+	// so we flush between the frame output and the next avcodec_send_packet().
 	if (m_CodecId == AV_CODEC_ID_HEVC && m_HWPixFmt == AV_PIX_FMT_NONE
-			&& FFHEVCRPSErrorCount() >= 10) {
-		DLog(L"CMPCVideoDecFilter::DecodeInternal(): HEVC: %d RPS errors — flushing decoder",
-			 FFHEVCRPSErrorCount().load());
+			&& m_bHEVCFlushAfterFrame) {
+		DLog(L"CMPCVideoDecFilter::DecodeInternal(): HEVC: flushing after high-error frame");
 		avcodec_flush_buffers(m_pAVCtx);
-		FFHEVCRPSErrorCount().store(0, std::memory_order_relaxed);
+		m_bHEVCFlushAfterFrame = false;
 		return S_FALSE;
 	}
 
@@ -3995,9 +3995,15 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 			break;
 		}
 
-		// Successful frame received — clear accumulated RPS error count.
-		if (m_CodecId == AV_CODEC_ID_HEVC)
-			FFHEVCRPSErrorCount().store(0, std::memory_order_relaxed);
+		// Successful frame received: read and clear the accumulated RPS error
+		// count. If many errors preceded this frame the decoder's internal
+		// state is potentially corrupt; schedule a flush before the next
+		// packet so avcodec_receive_frame() does not crash on that call.
+		if (m_CodecId == AV_CODEC_ID_HEVC) {
+			const int prevErrors = FFHEVCRPSErrorCount().exchange(0, std::memory_order_relaxed);
+			if (prevErrors >= 10)
+				m_bHEVCFlushAfterFrame = true;
+		}
 
 		if (m_HWPixFmt != AV_PIX_FMT_NONE) {
 			if (m_pHWFrame->format != m_HWPixFmt) {
