@@ -4044,6 +4044,23 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 
 		// SW decode: hand off to pipeline worker thread (convert + deliver asynchronously)
 		if (m_HWPixFmt == AV_PIX_FMT_NONE) {
+			// Flush the HEVC decoder when corrupt frames accumulate. The RPS
+			// error-recovery path corrupts internal reference frame state over
+			// time and eventually crashes inside avcodec_receive_frame().
+			if (m_CodecId == AV_CODEC_ID_HEVC) {
+				if (frame->flags & AV_FRAME_FLAG_CORRUPT) {
+					if (++m_nConsecCorruptFrames >= 30) {
+						DLog(L"CMPCVideoDecFilter::DecodeInternal(): HEVC: %d consecutive corrupt frames — flushing decoder", m_nConsecCorruptFrames);
+						avcodec_flush_buffers(m_pAVCtx);
+						m_nConsecCorruptFrames = 0;
+						av_frame_unref(frame);
+						break;
+					}
+				} else {
+					m_nConsecCorruptFrames = 0;
+				}
+			}
+
 			SWPipelineFrame pf;
 			pf.pFrame = av_frame_clone(frame);
 			if (pf.pFrame) {
