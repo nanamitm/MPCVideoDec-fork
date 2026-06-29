@@ -2101,7 +2101,17 @@ DWORD CMPCVideoDecFilter::SWDeliverThread()
 				}
 			}
 
-			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Converting start  src=%p dst=%p", pConvFrame->data[0], pDataOut);
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Converting start  src=%p ls=[%d,%d,%d] dst=%p",
+				 pConvFrame->data[0], pConvFrame->linesize[0], pConvFrame->linesize[1], pConvFrame->linesize[2], pDataOut);
+
+			// Guard against frames with missing planes (can occur with error-concealed HEVC frames)
+			if (!pConvFrame->data[0]) {
+				DLog(L"CMPCVideoDecFilter::SWDeliverThread(): null Y plane, skipping corrupt frame");
+				if (pTmpFrame) av_frame_free(&pTmpFrame);
+				av_frame_free(&f.pFrame);
+				continue;
+			}
+
 			m_FormatConverter.Converting(pDataOut, pConvFrame);
 			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Converting done");
 			if (pTmpFrame) av_frame_free(&pTmpFrame);

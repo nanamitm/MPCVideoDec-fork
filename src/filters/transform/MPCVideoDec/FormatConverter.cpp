@@ -494,6 +494,11 @@ void CFormatConverter::SetOptions(int rgblevels)
 
 bool CFormatConverter::Converting(BYTE* dst, AVFrame* pFrame)
 {
+	if (!dst || !pFrame || !pFrame->data[0]) {
+		DLog(L"FormatConverter::Converting() - null dst or frame plane, skipping");
+		return false;
+	}
+
 	if (FormatChanged(&m_FProps.avpixfmt, (AVPixelFormat*)&pFrame->format)
 			|| pFrame->width != m_FProps.width || pFrame->height != m_FProps.height) {
 		// update the basic properties
