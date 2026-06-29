@@ -146,7 +146,7 @@ static MPCHwDecoder GetHwDecoderByName(LPCWSTR name)
 	return DefaultHwDecoder();
 }
 
-#define MAX_AUTO_THREADS 32
+#define MAX_AUTO_THREADS 16
 
 #pragma region any_constants
 
@@ -4560,6 +4560,9 @@ void CMPCVideoDecFilter::SetThreadCount()
 		} else {
 			int nThreadNumber = (m_nThreadNumber > 0) ? m_nThreadNumber : CPUInfo::GetProcessorNumber();
 			m_pAVCtx->thread_count = std::clamp(nThreadNumber, 1, MAX_AUTO_THREADS);
+			if (m_CodecId == AV_CODEC_ID_HEVC) {
+				m_pAVCtx->thread_type = FF_THREAD_SLICE;
+			}
 		}
 	}
 }
