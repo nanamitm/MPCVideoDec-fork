@@ -26,6 +26,17 @@ extern "C" {
 	#include <ExtLib/ffmpeg/libavutil/log.h>
 }
 
+#include <atomic>
+
+// Count of consecutive "Error constructing the frame RPS" messages from the
+// HEVC decoder. Checked in DecodeInternal() to flush the decoder before its
+// internal reference-frame state becomes corrupt enough to crash.
+inline std::atomic<int>& FFHEVCRPSErrorCount()
+{
+	static std::atomic<int> s_count{0};
+	return s_count;
+}
+
 #define LOG_BUF_LEN 2048
 inline void ff_log(void* ptr, int level, const char *fmt, va_list valist)
 {
@@ -38,6 +49,10 @@ inline void ff_log(void* ptr, int level, const char *fmt, va_list valist)
 		const size_t len = strnlen_s(line, LOG_BUF_LEN);
 		if (len > 0 && line[len - 1] == '\n') {
 			line[len - 1] = 0;
+		}
+
+		if (level == AV_LOG_ERROR && strstr(line, "Error constructing the frame RPS")) {
+			FFHEVCRPSErrorCount().fetch_add(1, std::memory_order_relaxed);
 		}
 
 		DLog(L"FF_LOG : %hs", line);

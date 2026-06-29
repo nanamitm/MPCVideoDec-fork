@@ -3921,6 +3921,18 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 		}
 	}
 
+	// Flush HEVC decoder when RPS errors accumulate to prevent an internal crash.
+	// AV_FRAME_FLAG_CORRUPT is not set by the HEVC decoder in this error path,
+	// so we count via the ff_log callback instead.
+	if (m_CodecId == AV_CODEC_ID_HEVC && m_HWPixFmt == AV_PIX_FMT_NONE
+			&& FFHEVCRPSErrorCount() >= 10) {
+		DLog(L"CMPCVideoDecFilter::DecodeInternal(): HEVC: %d RPS errors — flushing decoder",
+			 FFHEVCRPSErrorCount().load());
+		avcodec_flush_buffers(m_pAVCtx);
+		FFHEVCRPSErrorCount().store(0, std::memory_order_relaxed);
+		return S_FALSE;
+	}
+
 	int ret = avcodec_send_packet(m_pAVCtx, avpkt);
 	const bool bPacketNeedsRetry = (ret == AVERROR(EAGAIN));
 	if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
@@ -3982,6 +3994,10 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 			av_frame_unref(frame);
 			break;
 		}
+
+		// Successful frame received — clear accumulated RPS error count.
+		if (m_CodecId == AV_CODEC_ID_HEVC)
+			FFHEVCRPSErrorCount().store(0, std::memory_order_relaxed);
 
 		if (m_HWPixFmt != AV_PIX_FMT_NONE) {
 			if (m_pHWFrame->format != m_HWPixFmt) {
