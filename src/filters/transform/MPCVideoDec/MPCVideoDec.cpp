@@ -1953,6 +1953,7 @@ void CMPCVideoDecFilter::StartSWPipeline()
 {
 	if (m_hSWDeliverThread) return;
 
+	DLog(L"CMPCVideoDecFilter::StartSWPipeline(): starting SW decode pipeline");
 	m_bSWPipelineFlushing  = false;
 	m_hSWFrameReady   = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 	m_hSWQueueNotFull = CreateEventW(nullptr, FALSE, TRUE,  nullptr);  // initially signaled
@@ -1964,6 +1965,7 @@ void CMPCVideoDecFilter::StopSWPipeline()
 {
 	if (!m_hSWDeliverThread) return;
 
+	DLog(L"CMPCVideoDecFilter::StopSWPipeline(): stopping SW decode pipeline");
 	SetEvent(m_hSWDeliverExit);
 	SetEvent(m_hSWFrameReady);  // wake thread so it sees the exit event
 	WaitForSingleObject(m_hSWDeliverThread, INFINITE);
@@ -2030,35 +2032,51 @@ DWORD WINAPI CMPCVideoDecFilter::SWDeliverThreadProc(LPVOID pParam)
 
 DWORD CMPCVideoDecFilter::SWDeliverThread()
 {
+	DLog(L"CMPCVideoDecFilter::SWDeliverThread(): thread started");
+
 	HANDLE handles[] = { m_hSWFrameReady, m_hSWDeliverExit };
 	for (;;) {
 		if (WaitForMultipleObjects(2, handles, FALSE, INFINITE) == WAIT_OBJECT_0 + 1) break;
 
 		for (;;) {
 			SWPipelineFrame f;
+			int queueSize;
 			{
 				CAutoLock lock(&m_csSWPipeline);
 				if (m_swPipelineQueue.empty()) break;
 				f = m_swPipelineQueue.front();
 				m_swPipelineQueue.pop_front();
-				if ((int)m_swPipelineQueue.size() < SW_PIPELINE_MAX_QUEUE)
+				queueSize = (int)m_swPipelineQueue.size();
+				if (queueSize < SW_PIPELINE_MAX_QUEUE)
 					SetEvent(m_hSWQueueNotFull);
 			}
 
+			if (!f.pFrame) {
+				DLog(L"CMPCVideoDecFilter::SWDeliverThread(): null frame in queue, skipping");
+				continue;
+			}
+
 			if (m_bSWPipelineFlushing) {
+				DLog(L"CMPCVideoDecFilter::SWDeliverThread(): flushing — discarding frame %dx%d", f.width, f.height);
 				av_frame_free(&f.pFrame);
 				continue;
 			}
 
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): frame %dx%d fmt=%d pts=%I64d  queue=%d",
+				 f.width, f.height, f.pFrame->format, f.pFrame->pts, queueSize);
+
 			CComPtr<IMediaSample> pOut;
 			BYTE* pDataOut = nullptr;
 			HRESULT hr;
+
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): calling GetDeliveryBuffer");
 			if (FAILED(hr = GetDeliveryBuffer(f.width, f.height, &pOut, GetFrameDuration(), &f.dxvaExtFormat))
 				|| FAILED(hr = pOut->GetPointer(&pDataOut))) {
 				DLog(L"CMPCVideoDecFilter::SWDeliverThread(): GetDeliveryBuffer failed hr=0x%08X", hr);
 				av_frame_free(&f.pFrame);
 				continue;
 			}
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): GetDeliveryBuffer OK  pDataOut=%p", pDataOut);
 
 			// rawvideo: fix misaligned planes before conversion
 			AVFrame* pConvFrame = f.pFrame;
@@ -2066,6 +2084,7 @@ DWORD CMPCVideoDecFilter::SWDeliverThread()
 			if (m_CodecId == AV_CODEC_ID_RAWVIDEO) {
 				for (size_t i = 0; i < 4; i++) {
 					if ((intptr_t)f.pFrame->data[i] % 16u || f.pFrame->linesize[i] % 16u) {
+						DLog(L"CMPCVideoDecFilter::SWDeliverThread(): rawvideo misalign on plane %zu — making aligned copy", i);
 						pTmpFrame = av_frame_alloc();
 						pTmpFrame->format      = f.pFrame->format;
 						pTmpFrame->width       = f.pFrame->width;
@@ -2082,18 +2101,25 @@ DWORD CMPCVideoDecFilter::SWDeliverThread()
 				}
 			}
 
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Converting start  src=%p dst=%p", pConvFrame->data[0], pDataOut);
 			m_FormatConverter.Converting(pDataOut, pConvFrame);
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Converting done");
 			if (pTmpFrame) av_frame_free(&pTmpFrame);
 
 			if (f.bSampleTime) pOut->SetTime(&f.rtStart, &f.rtStop);
 			pOut->SetMediaTime(nullptr, nullptr);
 			SetTypeSpecificFlags(pOut, f.pFrame);
 			AddFrameSideData(pOut, f.pFrame);
-			m_pOutput->Deliver(pOut);
+
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Deliver start");
+			hr = m_pOutput->Deliver(pOut);
+			DLog(L"CMPCVideoDecFilter::SWDeliverThread(): Deliver done  hr=0x%08X", hr);
 
 			av_frame_free(&f.pFrame);
 		}
 	}
+
+	DLog(L"CMPCVideoDecFilter::SWDeliverThread(): thread exiting");
 	return 0;
 }
 
@@ -4018,7 +4044,11 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 				pf.width         = w;
 				pf.height        = h;
 				if (!m_hSWDeliverThread) StartSWPipeline();
+				DLog(L"CMPCVideoDecFilter::DecodeInternal(): SW frame decoded  %dx%d fmt=%d pts=%I64d — pushing to pipeline",
+					 w, h, frame->format, frame->pts);
 				PushSWFrame(std::move(pf));
+			} else {
+				DLog(L"CMPCVideoDecFilter::DecodeInternal(): av_frame_clone failed for SW frame %dx%d", w, h);
 			}
 			av_frame_unref(frame);
 			m_bDecoderAcceptFormat = TRUE;
