@@ -4053,8 +4053,10 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 
 	if (bPacketNeedsRetry) {
 		ret = avcodec_send_packet(m_pAVCtx, avpkt);
-		DLogIf(ret < 0 && ret != AVERROR_EOF,
-			L"CMPCVideoDecFilter::DecodeInternal(): retry after EAGAIN failed: %S", AVError2Str(ret));
+		if (ret < 0 && ret != AVERROR_EOF) {
+			DLog(L"CMPCVideoDecFilter::DecodeInternal(): retry after EAGAIN failed: %S", AVError2Str(ret));
+			return S_FALSE;
+		}
 	}
 
 	return S_OK;
