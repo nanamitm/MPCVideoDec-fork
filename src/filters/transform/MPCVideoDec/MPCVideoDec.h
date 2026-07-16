@@ -160,7 +160,6 @@ private:
 	BOOL									m_bWaitingForKeyFrame  = TRUE;
 	BOOL									m_bRVDropBFrameTimings = FALSE;
 	int										m_nConsecCorruptFrames = 0;
-	bool									m_bHEVCFlushAfterFrame = false;
 
 	REFERENCE_TIME							m_rtStartCache = INVALID_TIME;
 

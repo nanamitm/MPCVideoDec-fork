@@ -1278,11 +1278,7 @@ CMPCVideoDecFilter::CMPCVideoDecFilter(LPUNKNOWN lpunk, HRESULT* phr)
 		m_nSwRGBLevels = 0;
 	}
 
-#ifdef DEBUG_OR_LOG
 	av_log_set_callback(ff_log);
-#else
-	av_log_set_callback(nullptr);
-#endif
 
 	m_FormatConverter.SetOptions(m_nSwRGBLevels);
 
@@ -3921,18 +3917,6 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 		}
 	}
 
-	// After delivering a frame that was preceded by many RPS errors, flush the
-	// decoder before sending the next packet. The crash pattern is:
-	//   [many RPS errors] -> [one frame output] -> [crash on next decode]
-	// so we flush between the frame output and the next avcodec_send_packet().
-	if (m_CodecId == AV_CODEC_ID_HEVC && m_HWPixFmt == AV_PIX_FMT_NONE
-			&& m_bHEVCFlushAfterFrame) {
-		DLog(L"CMPCVideoDecFilter::DecodeInternal(): HEVC: flushing after high-error frame");
-		avcodec_flush_buffers(m_pAVCtx);
-		m_bHEVCFlushAfterFrame = false;
-		return S_FALSE;
-	}
-
 	int ret = avcodec_send_packet(m_pAVCtx, avpkt);
 	const bool bPacketNeedsRetry = (ret == AVERROR(EAGAIN));
 	if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
@@ -3995,15 +3979,6 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 			break;
 		}
 
-		// Successful frame received: read and clear the accumulated RPS error
-		// count. If many errors preceded this frame the decoder's internal
-		// state is potentially corrupt; schedule a flush before the next
-		// packet so avcodec_receive_frame() does not crash on that call.
-		if (m_CodecId == AV_CODEC_ID_HEVC) {
-			const int prevErrors = FFHEVCRPSErrorCount().exchange(0, std::memory_order_relaxed);
-			if (prevErrors >= 10)
-				m_bHEVCFlushAfterFrame = true;
-		}
 
 		if (m_HWPixFmt != AV_PIX_FMT_NONE) {
 			if (m_pHWFrame->format != m_HWPixFmt) {
@@ -4101,11 +4076,6 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 			}
 			av_frame_unref(frame);
 			m_bDecoderAcceptFormat = TRUE;
-			// If the decoder was just flagged for a flush, break instead of
-			// continuing: calling avcodec_receive_frame() again with corrupted
-			// internal state causes the crash we are trying to prevent.
-			if (m_bHEVCFlushAfterFrame)
-				break;
 			continue;
 		}
 
