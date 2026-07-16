@@ -159,6 +159,7 @@ private:
 
 	BOOL									m_bWaitingForKeyFrame  = TRUE;
 	BOOL									m_bRVDropBFrameTimings = FALSE;
+	int										m_nConsecCorruptFrames = 0;
 
 	REFERENCE_TIME							m_rtStartCache = INVALID_TIME;
 
@@ -216,6 +217,32 @@ private:
 	uint32_t m_Palette[256] = {};
 
 	std::unique_ptr<CD3D11Decoder> m_pD3D11Decoder;
+
+	// === SW decode pipeline (decode thread → convert/deliver worker thread)
+	struct SWPipelineFrame {
+		AVFrame*             pFrame       = nullptr;
+		REFERENCE_TIME       rtStart      = 0;
+		REFERENCE_TIME       rtStop       = 0;
+		bool                 bSampleTime  = false;
+		DXVA2_ExtendedFormat dxvaExtFormat{};
+		int                  width        = 0;
+		int                  height       = 0;
+	};
+	static const int         SW_PIPELINE_MAX_QUEUE = 4;
+	std::deque<SWPipelineFrame> m_swPipelineQueue;
+	CCritSec                 m_csSWPipeline;
+	HANDLE                   m_hSWFrameReady    = nullptr;  // auto-reset: queue non-empty
+	HANDLE                   m_hSWQueueNotFull  = nullptr;  // auto-reset: queue has space
+	HANDLE                   m_hSWDeliverExit   = nullptr;  // manual-reset: thread stop
+	HANDLE                   m_hSWDeliverThread = nullptr;
+	volatile bool            m_bSWPipelineFlushing = false;
+
+	void          StartSWPipeline();
+	void          StopSWPipeline();
+	void          FlushSWPipeline();
+	void          PushSWFrame(SWPipelineFrame frame);
+	static DWORD  WINAPI SWDeliverThreadProc(LPVOID pParam);
+	DWORD         SWDeliverThread();
 
 	// === Private functions
 	void			Cleanup();
@@ -346,7 +373,7 @@ public:
 	bool						IsDXVASupported(const bool bMode);
 	void						UpdateAspectRatio();
 	void						FlushDXVADecoder();
-	void						SetTypeSpecificFlags(IMediaSample* pMS);
+	void						SetTypeSpecificFlags(IMediaSample* pMS, const AVFrame* pFrame = nullptr);
 
 	// === DXVA2 functions
 	void						FillInVideoDescription(DXVA2_VideoDesc& videoDesc, D3DFORMAT Format = D3DFMT_A8R8G8B8);

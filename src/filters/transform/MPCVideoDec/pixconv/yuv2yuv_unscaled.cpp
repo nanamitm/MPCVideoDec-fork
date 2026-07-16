@@ -125,6 +125,10 @@ HRESULT CFormatConverter::convert_yuv_yv_nv12_dither_le(CONV_FUNC_PARAMS)
 
 HRESULT CFormatConverter::convert_yuv420_px1x_le(CONV_FUNC_PARAMS)
 {
+    if (!src[0] || !src[1] || !src[2]) {
+        return E_POINTER;
+    }
+
     const auto& bpp = m_FProps.lumabits;
 
     const ptrdiff_t inYStride = srcStride[0];
