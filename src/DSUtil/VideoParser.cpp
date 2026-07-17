@@ -1034,11 +1034,11 @@ namespace HEVCParser {
 		gb.BitRead(8);					// AVCProfileIndication
 		gb.BitRead(8);					// profile_compatibility
 		gb.BitRead(8);					// AVCLevelIndication;
-		if (gb.BitRead(6) != 63) {		// reserved = ‘111111’b
+		if (gb.BitRead(6) != 63) {		// reserved = '111111'b
 			return false;
 		}
 		params.nal_length_size = gb.BitRead(2) + 1;	// lengthSizeMinusOne
-		if (gb.BitRead(3) != 7) {		// reserved = ‘111’b
+		if (gb.BitRead(3) != 7) {		// reserved = '111'b
 			return false;
 		}
 		int numOfSequenceParameterSets = gb.BitRead(5);
@@ -1068,11 +1068,11 @@ namespace HEVCParser {
 		//  if( profile_idc  ==  100  ||  profile_idc  ==  110  ||
 		//      profile_idc  ==  122  ||  profile_idc  ==  144 )
 		//  {
-		//    bit(6) reserved = ‘111111’b;
+		//    bit(6) reserved = '111111'b;
 		//    unsigned int(2) chroma_format;
-		//    bit(5) reserved = ‘11111’b;
+		//    bit(5) reserved = '11111'b;
 		//    unsigned int(3) bit_depth_luma_minus8;
-		//    bit(5) reserved = ‘11111’b;
+		//    bit(5) reserved = '11111'b;
 		//    unsigned int(3) bit_depth_chroma_minus8;
 		//    unsigned int(8) numOfSequenceParameterSetExt;
 		//    for (i=0; i< numOfSequenceParameterSetExt; i++) {
@@ -1107,23 +1107,23 @@ namespace HEVCParser {
 		gb.BitRead(32);					// general_profile_compatibility_flags
 		gb.BitRead(48);					// general_constraint_indicator_flags
 		params.level = gb.BitRead(8);	// general_level_idc
-		if (gb.BitRead(4) != 15) {		// reserved = ‘1111’b
+		if (gb.BitRead(4) != 15) {		// reserved = '1111'b
 			return false;
 		}
 		gb.BitRead(12);				// min_spatial_segmentation_idc
-		if (gb.BitRead(6) != 63) {	// reserved = ‘111111’b
+		if (gb.BitRead(6) != 63) {	// reserved = '111111'b
 			return false;
 		}
 		gb.BitRead(2);				// parallelismType
-		if (gb.BitRead(6) != 63) {	// reserved = ‘111111’b
+		if (gb.BitRead(6) != 63) {	// reserved = '111111'b
 			return false;
 		}
 		uint8_t chromaFormat = gb.BitRead(2); // 0 = monochrome, 1 = 4:2:0, 2 = 4:2:2, 3 = 4:4:4
-		if (gb.BitRead(5) != 31) {	// reserved = ‘11111’b
+		if (gb.BitRead(5) != 31) {	// reserved = '11111'b
 			return false;
 		}
 		uint8_t bitDepthLumaMinus8 = gb.BitRead(3);
-		if (gb.BitRead(5) != 31) {	// reserved = ‘11111’b
+		if (gb.BitRead(5) != 31) {	// reserved = '11111'b
 			return false;
 		}
 		uint8_t bitDepthChromaMinus8 = gb.BitRead(3);

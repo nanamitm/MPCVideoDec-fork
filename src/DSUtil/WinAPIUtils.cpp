@@ -129,7 +129,7 @@ bool ReadDisplay(CString szDevice, CString* MonitorName, UINT16* MonitorHorRes, 
 																UINT8* EDIDdata = (UINT8*)DisplayDevice.DeviceKey;
 																// memo: bytes 25 to 34 contain the default chromaticity coordinates
 
-																// pixel clock in 10 kHz units (0.01–655.35 MHz)
+																// pixel clock in 10 kHz units (0.01-655.35 MHz)
 																UINT16 u16PixelClock = *(UINT16*)(EDIDdata + 54);
 																if (u16PixelClock) {// if the descriptor for pixel clock is 0, the descriptor block is invalid
 																	// horizontal active pixels
