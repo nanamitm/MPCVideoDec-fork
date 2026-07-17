@@ -8,7 +8,6 @@ name: Build and release MPCVideoDec-fork.ax
 
 on:
   push:
-    branches: [master]
     # No hyphens: update_revision.cmd splits `git describe --long` on "-" and
     # assumes the tag itself contributes exactly one token, so a hyphenated
     # tag (e.g. decoder-v...) shifts the count/hash fields and breaks REV_NUM.
