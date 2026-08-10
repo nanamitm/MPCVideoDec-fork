@@ -158,11 +158,6 @@ public:
 // dark mode is to override the drawing ourselves.
 class CMPCDarkCodecListBox : public CCheckListBox
 {
-	bool m_fDark = false;
-
-public:
-	void SetDarkMode(bool fDark);
-
 protected:
 	void DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct) override;
 };

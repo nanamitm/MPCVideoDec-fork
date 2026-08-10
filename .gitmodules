@@ -7,3 +7,6 @@
 [submodule "src/ExtLib/vvdec/vvdec"]
 	path = src/ExtLib/vvdec/vvdec
 	url = https://github.com/fraunhoferhhi/vvdec.git
+[submodule "src/ExtLib/darkmodelib"]
+	path = src/ExtLib/darkmodelib
+	url = https://github.com/ozone10/win32-darkmodelib.git

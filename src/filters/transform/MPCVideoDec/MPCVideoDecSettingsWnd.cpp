@@ -25,7 +25,7 @@ extern "C" {
 	#include <ExtLib/ffmpeg/libavcodec/defs.h>
 }
 #include "DxgiUtils.h"
-#include "filters/filters/DarkMode.h"
+#include <Darkmodelib.h>
 
 namespace {
 	constexpr UINT PCI_VENDOR_NVIDIA = 0x10DE;
@@ -770,8 +770,6 @@ bool CMPCVideoDecCodecWnd::OnActivate()
 		pWnd->SetFont(&m_font, FALSE);
 	}
 
-	m_lstCodecs.SetDarkMode(IsDarkMode());
-
 	return true;
 }
 
@@ -781,22 +779,13 @@ void CMPCVideoDecCodecWnd::OnDeactivate()
 
 void CMPCVideoDecCodecWnd::OnDarkModeChanged(bool fDarkMode)
 {
-	m_lstCodecs.SetDarkMode(fDarkMode);
 	m_lstCodecs.Invalidate();
-}
-
-void CMPCDarkCodecListBox::SetDarkMode(bool fDark)
-{
-	m_fDark = fDark;
-	if (m_hWnd) {
-		::SetWindowTheme(m_hWnd, fDark ? L"DarkMode_Explorer" : nullptr, nullptr);
-	}
 }
 
 // CCheckListBox's actual WM_DRAWITEM handler is the non-virtual PreDrawItem()
 // (see atlmfc/src/mfc/winctrl3.cpp), which already draws the checkbox glyph
 // itself - via OpenThemeData(m_hWnd, L"Button"), so it already follows
-// SetDarkMode()'s SetWindowTheme() call - then shrinks rcItem.left past it
+// dmlib's list-box theming - then shrinks rcItem.left past it
 // before calling this virtual override. So this only needs to draw the
 // (already checkbox-excluded) label, same as the base DrawItem(), just with
 // dark-mode-aware colors instead of GetSysColor().
@@ -809,8 +798,11 @@ void CMPCDarkCodecListBox::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	CString strText;
 	GetText(lpDrawItemStruct->itemID, strText);
 
-	const COLORREF clrBack = fSelected ? ::GetSysColor(COLOR_HIGHLIGHT) : MPCDarkMode::BackColor(m_fDark);
-	const COLORREF clrText = fSelected ? ::GetSysColor(COLOR_HIGHLIGHTTEXT) : MPCDarkMode::TextColor(m_fDark);
+	const bool fDark = dmlib::isThemeDark();
+	const COLORREF clrBack = fSelected ? ::GetSysColor(COLOR_HIGHLIGHT)
+		: (fDark ? dmlib::getBackgroundColor() : ::GetSysColor(COLOR_WINDOW));
+	const COLORREF clrText = fSelected ? ::GetSysColor(COLOR_HIGHLIGHTTEXT)
+		: (fDark ? dmlib::getTextColor() : ::GetSysColor(COLOR_WINDOWTEXT));
 
 	pDC->FillSolidRect(&rcItem, clrBack);
 

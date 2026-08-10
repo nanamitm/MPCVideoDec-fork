@@ -23,7 +23,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug Filter|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include;$(SolutionDir)src\ExtLib\darkmodelib\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -36,7 +36,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug Filter|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include;$(SolutionDir)src\ExtLib\darkmodelib\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -49,7 +49,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release Filter|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include;$(SolutionDir)src\ExtLib\darkmodelib\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -61,7 +61,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release Filter|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(SolutionDir)include;$(SolutionDir)src\ExtLib\ffmpeg;$(SolutionDir)src\ExtLib\ffmpeg\compat\atomics\win32;$(SolutionDir)src;$(SolutionDir)src\ExtLib\nv-codec-headers\include;$(SolutionDir)src\ExtLib\mfx_dispatch\include;$(SolutionDir)src\ExtLib\darkmodelib\include</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4003;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>

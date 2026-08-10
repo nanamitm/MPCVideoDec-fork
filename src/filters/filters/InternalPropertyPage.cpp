@@ -24,6 +24,7 @@
 #include "DSUtil/std_helper.h"
 
 #include "InternalPropertyPage.h"
+#include <Darkmodelib.h>
 
 
 #define DEFAULT_FONTSIZE 13
@@ -111,8 +112,7 @@ BOOL CInternalPropertyPageWnd::Create(IPropertyPageSite* pPageSite, LPCRECT pRec
 
 	SetFont(&m_font);
 
-	m_fDarkMode = MPCDarkMode::IsDarkMode();
-	UpdateDarkModeBrushes();
+	dmlib::initDarkMode();
 
 	return TRUE;
 }
@@ -133,79 +133,31 @@ BOOL CInternalPropertyPageWnd::OnWndMsg(UINT message, WPARAM wParam, LPARAM lPar
 	return __super::OnWndMsg(message, wParam, lParam, pResult);
 }
 
-void CInternalPropertyPageWnd::UpdateDarkModeBrushes()
-{
-	if (m_BackBrush.GetSafeHandle()) {
-		m_BackBrush.DeleteObject();
-	}
-	if (m_FaceBrush.GetSafeHandle()) {
-		m_FaceBrush.DeleteObject();
-	}
-	m_BackBrush.CreateSolidBrush(MPCDarkMode::BackColor(m_fDarkMode));
-	m_FaceBrush.CreateSolidBrush(MPCDarkMode::FaceColor(m_fDarkMode));
-}
-
 void CInternalPropertyPageWnd::ApplyDarkMode()
 {
 	if (m_hWnd) {
-		MPCDarkMode::ApplyTheme(m_hWnd, m_fDarkMode);
+		// Property pages are WS_CHILD windows owned by a host application's
+		// property sheet. Deliberately do not apply dmlib's title-bar/Mica
+		// options, which are only appropriate for top-level windows.
+		dmlib::setWindowEraseBgSubclass(m_hWnd);
+		dmlib::setWindowCtlColorSubclass(m_hWnd);
+		dmlib::setChildCtrlsSubclassAndTheme(m_hWnd);
+		dmlib::setWindowNotifyCustomDrawSubclass(m_hWnd);
 	}
-}
-
-HBRUSH CInternalPropertyPageWnd::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
-{
-	if (!m_fDarkMode) {
-		return __super::OnCtlColor(pDC, pWnd, nCtlColor);
-	}
-
-	switch (nCtlColor) {
-	case CTLCOLOR_STATIC:
-	case CTLCOLOR_BTN:
-		pDC->SetTextColor(MPCDarkMode::TextColor(true));
-		pDC->SetBkColor(MPCDarkMode::FaceColor(true));
-		return static_cast<HBRUSH>(m_FaceBrush.GetSafeHandle());
-
-	case CTLCOLOR_EDIT:
-	case CTLCOLOR_LISTBOX:
-		pDC->SetTextColor(MPCDarkMode::TextColor(true));
-		pDC->SetBkColor(MPCDarkMode::BackColor(true));
-		return static_cast<HBRUSH>(m_BackBrush.GetSafeHandle());
-	}
-
-	return __super::OnCtlColor(pDC, pWnd, nCtlColor);
-}
-
-BOOL CInternalPropertyPageWnd::OnEraseBkgnd(CDC* pDC)
-{
-	if (!m_fDarkMode) {
-		return __super::OnEraseBkgnd(pDC);
-	}
-
-	CRect rc;
-	GetClientRect(&rc);
-	pDC->FillRect(&rc, &m_FaceBrush);
-	return TRUE;
 }
 
 void CInternalPropertyPageWnd::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
 {
 	__super::OnSettingChange(uFlags, lpszSection);
 
-	if (MPCDarkMode::IsDarkModeSettingChanged(m_hWnd, WM_SETTINGCHANGE, uFlags, reinterpret_cast<LPARAM>(lpszSection))) {
-		const bool fDarkMode = MPCDarkMode::IsDarkMode();
-		if (fDarkMode != m_fDarkMode) {
-			m_fDarkMode = fDarkMode;
-			UpdateDarkModeBrushes();
-			ApplyDarkMode();
-			OnDarkModeChanged(m_fDarkMode);
-			RedrawWindow(nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE | RDW_ALLCHILDREN);
-		}
+	if (dmlib::handleSettingChange(reinterpret_cast<LPARAM>(lpszSection))) {
+		ApplyDarkMode();
+		OnDarkModeChanged(dmlib::isThemeDark());
+		RedrawWindow(nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE | RDW_ALLCHILDREN);
 	}
 }
 
 BEGIN_MESSAGE_MAP(CInternalPropertyPageWnd, CWnd)
-	ON_WM_CTLCOLOR()
-	ON_WM_ERASEBKGND()
 	ON_WM_SETTINGCHANGE()
 END_MESSAGE_MAP()
 
