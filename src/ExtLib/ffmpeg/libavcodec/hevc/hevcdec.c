@@ -185,7 +185,7 @@ static int pred_weight_table(SliceHeader *sh, void *logctx,
         av_log(logctx, AV_LOG_ERROR, "luma_log2_weight_denom %d is invalid\n", luma_log2_weight_denom);
         return AVERROR_INVALIDDATA;
     }
-    sh->luma_log2_weight_denom = av_clip_uintp2(luma_log2_weight_denom, 3);
+    sh->luma_log2_weight_denom = luma_log2_weight_denom;
     if (sps->chroma_format_idc != 0) {
         int64_t chroma_log2_weight_denom = luma_log2_weight_denom + (int64_t)get_se_golomb(gb);
         if (chroma_log2_weight_denom < 0 || chroma_log2_weight_denom > 7) {
@@ -389,26 +389,11 @@ static int export_stream_params_from_sei(HEVCContext *s)
 {
     AVCodecContext *avctx = s->avctx;
 
-#if FF_API_CODEC_PROPS
-FF_DISABLE_DEPRECATION_WARNINGS
-    if (s->sei.common.itut_t35.a53_cc)
-        s->avctx->properties |= FF_CODEC_PROPERTY_CLOSED_CAPTIONS;
-FF_ENABLE_DEPRECATION_WARNINGS
-#endif
-
     if (s->sei.common.alternative_transfer.present &&
         av_color_transfer_name(s->sei.common.alternative_transfer.preferred_transfer_characteristics) &&
         s->sei.common.alternative_transfer.preferred_transfer_characteristics != AVCOL_TRC_UNSPECIFIED) {
         avctx->color_trc = s->sei.common.alternative_transfer.preferred_transfer_characteristics;
     }
-
-#if FF_API_CODEC_PROPS
-FF_DISABLE_DEPRECATION_WARNINGS
-    if ((s->sei.common.film_grain_characteristics && s->sei.common.film_grain_characteristics->present) ||
-        s->sei.common.itut_t35.aom_film_grain.enable)
-        avctx->properties |= FF_CODEC_PROPERTY_FILM_GRAIN;
-FF_ENABLE_DEPRECATION_WARNINGS
-#endif
 
     return 0;
 }
@@ -471,28 +456,16 @@ int ff_hevc_is_alpha_video(const HEVCContext *s)
     return ret;
 }
 
-static int setup_multilayer(HEVCContext *s, const HEVCVPS *vps)
+int ff_hevc_requested_layers(const HEVCContext *s, const HEVCVPS *vps,
+                             unsigned *active_output)
 {
     unsigned layers_active_output = 0, highest_layer;
 
-    s->layers_active_output = 1;
-    s->layers_active_decode = 1;
-
-    if (ff_hevc_is_alpha_video(s)) {
-        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(s->avctx->pix_fmt);
-
-        if (!(desc->flags & AV_PIX_FMT_FLAG_ALPHA))
-            return 0;
-
-        s->layers_active_decode = (1 << vps->nb_layers) - 1;
-        s->layers_active_output = 1;
-
-        return 0;
-    }
-
     // nothing requested - decode base layer only
-    if (!s->nb_view_ids)
-        return 0;
+    if (!s->nb_view_ids) {
+        *active_output = 1;
+        return 1;
+    }
 
     if (s->nb_view_ids == 1 && s->view_ids[0] == -1) {
         layers_active_output = (1 << vps->nb_layers) - 1;
@@ -534,11 +507,40 @@ static int setup_multilayer(HEVCContext *s, const HEVCVPS *vps)
         return AVERROR(EINVAL);
     }
 
+    *active_output = layers_active_output;
+
     /* Assume a higher layer depends on all the lower ones.
      * This is enforced in VPS parsing currently, this logic will need
      * to be changed if we want to support more complex dependency structures.
      */
-    s->layers_active_decode = (1 << (highest_layer + 1)) - 1;
+    return highest_layer + 1;
+}
+
+static int setup_multilayer(HEVCContext *s, const HEVCVPS *vps)
+{
+    unsigned layers_active_output;
+    int nb_decode_layers;
+
+    s->layers_active_output = 1;
+    s->layers_active_decode = 1;
+
+    if (ff_hevc_is_alpha_video(s)) {
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(s->avctx->pix_fmt);
+
+        if (!(desc->flags & AV_PIX_FMT_FLAG_ALPHA))
+            return 0;
+
+        s->layers_active_decode = (1 << vps->nb_layers) - 1;
+        s->layers_active_output = 1;
+
+        return 0;
+    }
+
+    nb_decode_layers = ff_hevc_requested_layers(s, vps, &layers_active_output);
+    if (nb_decode_layers < 0)
+        return nb_decode_layers;
+
+    s->layers_active_decode = (1 << nb_decode_layers) - 1;
     s->layers_active_output = layers_active_output;
 
     av_log(s->avctx, AV_LOG_DEBUG, "decode/output layers: %x/%x\n",
@@ -581,6 +583,7 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
                      CONFIG_HEVC_D3D11VA_HWACCEL * 2 + \
                      CONFIG_HEVC_D3D12VA_HWACCEL + \
                      CONFIG_HEVC_NVDEC_HWACCEL + \
+                     CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL + \
                      CONFIG_HEVC_VAAPI_HWACCEL + \
                      CONFIG_HEVC_VIDEOTOOLBOX_HWACCEL + \
                      CONFIG_HEVC_VDPAU_HWACCEL + \
@@ -613,6 +616,9 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
 #endif
 #if CONFIG_HEVC_NVDEC_HWACCEL
         *fmt++ = AV_PIX_FMT_CUDA;
+#endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+        *fmt++ = AV_PIX_FMT_CUARRAY;
 #endif
 #if CONFIG_HEVC_VIDEOTOOLBOX_HWACCEL
         *fmt++ = AV_PIX_FMT_VIDEOTOOLBOX;
@@ -647,6 +653,9 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
 #if CONFIG_HEVC_NVDEC_HWACCEL
         *fmt++ = AV_PIX_FMT_CUDA;
 #endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+        *fmt++ = AV_PIX_FMT_CUARRAY;
+#endif
         break;
     case AV_PIX_FMT_YUV444P:
 // ==> Start patch MPC
@@ -663,6 +672,9 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
 #endif
 #if CONFIG_HEVC_NVDEC_HWACCEL
         *fmt++ = AV_PIX_FMT_CUDA;
+#endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+        *fmt++ = AV_PIX_FMT_CUARRAY;
 #endif
 #if CONFIG_HEVC_VIDEOTOOLBOX_HWACCEL
         *fmt++ = AV_PIX_FMT_VIDEOTOOLBOX;
@@ -691,6 +703,9 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
 #if CONFIG_HEVC_NVDEC_HWACCEL
         *fmt++ = AV_PIX_FMT_CUDA;
 #endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+        *fmt++ = AV_PIX_FMT_CUARRAY;
+#endif
         break;
     case AV_PIX_FMT_YUV444P10:
 #if CONFIG_HEVC_VIDEOTOOLBOX_HWACCEL
@@ -717,6 +732,9 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
 #if CONFIG_HEVC_NVDEC_HWACCEL
         *fmt++ = AV_PIX_FMT_CUDA;
 #endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+        *fmt++ = AV_PIX_FMT_CUARRAY;
+#endif
         break;
     case AV_PIX_FMT_YUV422P12:
 // ==> Start patch MPC
@@ -733,6 +751,9 @@ static enum AVPixelFormat get_format(HEVCContext *s, const HEVCSPS *sps)
 #endif
 #if CONFIG_HEVC_NVDEC_HWACCEL
         *fmt++ = AV_PIX_FMT_CUDA;
+#endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+        *fmt++ = AV_PIX_FMT_CUARRAY;
 #endif
         break;
     }
@@ -1874,7 +1895,7 @@ static void luma_mc_bi(HEVCLocalContext *lc,
                                                          block_h, s->sh.luma_log2_weight_denom,
                                                          s->sh.luma_weight_l0[current_mv->ref_idx[0]],
                                                          s->sh.luma_weight_l1[current_mv->ref_idx[1]],
-                                                         s->sh.luma_offset_l0[current_mv->ref_idx[0]],
+                                                         s->sh.luma_offset_l0[current_mv->ref_idx[0]] +
                                                          s->sh.luma_offset_l1[current_mv->ref_idx[1]],
                                                          mx1, my1, block_w);
 
@@ -2055,7 +2076,7 @@ static void chroma_mc_bi(HEVCLocalContext *lc,
                                                          s->sh.chroma_log2_weight_denom,
                                                          s->sh.chroma_weight_l0[current_mv->ref_idx[0]][cidx],
                                                          s->sh.chroma_weight_l1[current_mv->ref_idx[1]][cidx],
-                                                         s->sh.chroma_offset_l0[current_mv->ref_idx[0]][cidx],
+                                                         s->sh.chroma_offset_l0[current_mv->ref_idx[0]][cidx] +
                                                          s->sh.chroma_offset_l1[current_mv->ref_idx[1]][cidx],
                                                          _mx1, _my1, block_w);
 }
@@ -2959,7 +2980,7 @@ static int hls_slice_data_wpp(HEVCContext *s, const H2645NAL *nal)
     int64_t startheader, cmpt = 0;
     int j, res = 0;
 
-    if (s->sh.slice_ctb_addr_rs + s->sh.num_entry_point_offsets * sps->ctb_width >= sps->ctb_width * sps->ctb_height) {
+    if (s->sh.slice_ctb_addr_rs + s->sh.num_entry_point_offsets * (int64_t)sps->ctb_width >= sps->ctb_width * (int64_t)sps->ctb_height) {
         av_log(s->avctx, AV_LOG_ERROR, "WPP ctb addresses are wrong (%d %d %d %d)\n",
             s->sh.slice_ctb_addr_rs, s->sh.num_entry_point_offsets,
             sps->ctb_width, sps->ctb_height
@@ -3171,6 +3192,16 @@ static int set_side_data(HEVCContext *s)
             return AVERROR(ENOMEM);
 
         ret = ff_frame_new_side_data_from_buf(s->avctx, out, AV_FRAME_DATA_DYNAMIC_HDR_PLUS, &info_ref);
+        if (ret < 0)
+            return ret;
+    }
+
+    if (s->sei.common.itut_t35.hdr_smpte2094_app5) {
+        AVBufferRef *info_ref = av_buffer_ref(s->sei.common.itut_t35.hdr_smpte2094_app5);
+        if (!info_ref)
+            return AVERROR(ENOMEM);
+
+        ret = ff_frame_new_side_data_from_buf(s->avctx, out, AV_FRAME_DATA_DYNAMIC_HDR_SMPTE_2094_APP5, &info_ref);
         if (ret < 0)
             return ret;
     }
@@ -3577,6 +3608,11 @@ static int decode_slice(HEVCContext *s, unsigned nal_idx, GetBitContext *gb)
         (s->nuh_layer_id > 0 && !(s->layers_active_decode & (1 << layer_idx))))
         return 0;
 
+    // the first slice of this picture was skipped, so drop the remaining
+    // slices before parsing, the context is stale for them
+    if (s->skipping_frame && !show_bits1(gb))
+        return 0;
+
     ret = hls_slice_header(&s->sh, s, gb);
     // Once hls_slice_header has been called, the context is inconsistent with the slice header
     // until the context is reinitialized according to the contents of the new slice header
@@ -3591,8 +3627,12 @@ static int decode_slice(HEVCContext *s, unsigned nal_idx, GetBitContext *gb)
         (s->avctx->skip_frame >= AVDISCARD_NONKEY && !IS_IRAP(s)) ||
         ((s->nal_unit_type == HEVC_NAL_RASL_R || s->nal_unit_type == HEVC_NAL_RASL_N) &&
          s->no_rasl_output_flag)) {
+        if (s->sh.first_slice_in_pic_flag)
+            s->skipping_frame = 1;
         return 0;
     }
+    if (s->sh.first_slice_in_pic_flag)
+        s->skipping_frame = 0;
 
     // switching to a new layer, mark previous layer's frame (if any) as done
     if (s->cur_layer != layer_idx &&
@@ -3725,10 +3765,47 @@ static void decode_reset_recovery_point(HEVCContext *s)
     s->sei.recovery_point.has_recovery_poc = 0;
 }
 
+static int export_stream_params_from_slice(HEVCContext *s, const H2645NAL *nal)
+{
+    GetBitContext gb = nal->gb;
+    const HEVCSPS *sps;
+    const HEVCVPS *vps;
+    unsigned pps_id;
+
+    int is_slice = nal->type <= HEVC_NAL_RASL_R ||
+                   (nal->type >= HEVC_NAL_BLA_W_LP &&
+                    nal->type <= HEVC_NAL_CRA_NUT);
+
+    if (!is_slice || nal->nuh_layer_id)
+        return 0;
+
+    skip_bits1(&gb); // first_slice_segment_in_pic_flag
+    if (nal->type >= HEVC_NAL_BLA_W_LP)
+        skip_bits1(&gb); // no_output_of_prior_pics_flag
+    pps_id = get_ue_golomb_long(&gb);
+    if (pps_id >= HEVC_MAX_PPS_COUNT || !s->ps.pps_list[pps_id])
+        return 0;
+    sps = s->ps.pps_list[pps_id]->sps;
+    vps = sps->vps;
+
+    export_stream_params(s, sps);
+
+    if (vps->nb_layers == 2 && vps->layer_id_in_nuh[1] &&
+        vps->scalability_mask_flag & HEVC_SCALABILITY_AUXILIARY) {
+        enum AVPixelFormat alpha_fmt = map_to_alpha_format(s, sps->pix_fmt);
+
+        if (alpha_fmt != AV_PIX_FMT_NONE)
+            s->avctx->pix_fmt = alpha_fmt;
+    }
+
+    return 1;
+}
+
 static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
 {
     int ret = 0;
     int eos_at_start = 1;
+    int params_exported = 0;
     int flags = (H2645_FLAG_IS_NALFF * !!s->is_nalff) | H2645_FLAG_SMALL_PADDING;
 
     s->cur_frame = s->collocated_ref = NULL;
@@ -3810,8 +3887,21 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
     for (int i = 0; i < s->pkt.nb_nals; i++) {
         H2645NAL *nal = &s->pkt.nals[i];
 
-        if (s->avctx->skip_frame >= AVDISCARD_ALL ||
-            (s->avctx->skip_frame >= AVDISCARD_NONREF && ff_hevc_nal_is_nonref(nal->type)))
+        if (s->avctx->skip_frame >= AVDISCARD_ALL) {
+            switch (nal->type) {
+            case HEVC_NAL_VPS:
+            case HEVC_NAL_SPS:
+            case HEVC_NAL_PPS:
+            case HEVC_NAL_SEI_PREFIX:
+            case HEVC_NAL_SEI_SUFFIX:
+                break;
+            default:
+                if (!s->layers[0].sps && !params_exported)
+                    params_exported = export_stream_params_from_slice(s, nal);
+                continue;
+            }
+        } else if (s->avctx->skip_frame >= AVDISCARD_NONREF &&
+                   ff_hevc_nal_is_nonref(nal->type))
             continue;
 
         ret = decode_nal_unit(s, i);
@@ -3820,6 +3910,12 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
                    "Error parsing NAL unit #%d.\n", i);
             goto fail;
         }
+    }
+
+    if (params_exported) {
+        ret = export_stream_params_from_sei(s);
+        if (ret < 0)
+            goto fail;
     }
 
 fail:
@@ -4094,6 +4190,7 @@ static int hevc_update_thread_context(AVCodecContext *dst,
     s->poc_tid0   = s0->poc_tid0;
     s->eos        = s0->eos;
     s->no_rasl_output_flag = s0->no_rasl_output_flag;
+    s->skipping_frame = s0->skipping_frame;
 
     s->is_nalff        = s0->is_nalff;
     s->nal_length_size = s0->nal_length_size;
@@ -4239,6 +4336,7 @@ static av_cold void hevc_decode_flush(AVCodecContext *avctx)
     ff_dovi_ctx_flush(&s->dovi_ctx);
     av_buffer_unref(&s->rpu_buf);
     s->eos = 1;
+    s->skipping_frame = 0;
 
     if (FF_HW_HAS_CB(avctx, flush))
         FF_HW_SIMPLE_CALL(avctx, flush);
@@ -4290,6 +4388,7 @@ const FFCodec ff_hevc_decoder = {
     .p.capabilities        = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_DELAY |
                              AV_CODEC_CAP_SLICE_THREADS | AV_CODEC_CAP_FRAME_THREADS,
     .caps_internal         = FF_CODEC_CAP_EXPORTS_CROPPING |
+                             FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM |
                              FF_CODEC_CAP_USES_PROGRESSFRAMES |
                              FF_CODEC_CAP_INIT_CLEANUP,
     .p.profiles            = NULL_IF_CONFIG_SMALL(ff_hevc_profiles),
@@ -4308,6 +4407,9 @@ const FFCodec ff_hevc_decoder = {
 #endif
 #if CONFIG_HEVC_NVDEC_HWACCEL
                                HWACCEL_NVDEC(hevc),
+#endif
+#if CONFIG_HEVC_NVDEC_CUARRAY_HWACCEL
+                               HWACCEL_NVDEC_CUARRAY(hevc),
 #endif
 #if CONFIG_HEVC_VAAPI_HWACCEL
                                HWACCEL_VAAPI(hevc),

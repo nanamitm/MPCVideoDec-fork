@@ -122,6 +122,7 @@ static const struct exif_tag tag_list[] = { // JEITA CP-3451 EXIF specification:
     {"Software",                   0x131},
     {"Artist",                     0x13B},
     {"Copyright",                  0x8298},
+    {"InterColorProfile",          0x8773},
     {"ExifVersion",                0x9000}, // <- Table 4 Exif IFD Attribute Information (1)
     {"FlashpixVersion",            0xA000},
     {"ColorSpace",                 0xA001},
@@ -1054,23 +1055,6 @@ int av_exif_ifd_to_dict(void *logctx, const AVExifMetadata *ifd, AVDictionary **
 {
     return exif_ifd_to_dict(logctx, "", ifd, metadata);
 }
-
-#if LIBAVCODEC_VERSION_MAJOR < 63
-int avpriv_exif_decode_ifd(void *logctx, const uint8_t *buf, int size,
-                           int le, int depth, AVDictionary **metadata)
-{
-    AVExifMetadata ifd = { 0 };
-    GetByteContext gb;
-    int ret;
-    bytestream2_init(&gb, buf, size);
-    ret = exif_parse_ifd_list(logctx, &gb, le, depth, &ifd, 0);
-    if (ret < 0)
-        return ret;
-    ret = av_exif_ifd_to_dict(logctx, &ifd, metadata);
-    av_exif_free(&ifd);
-    return ret;
-}
-#endif
 
 #define EXIF_COPY(fname, srcname) do { \
     size_t sz; \

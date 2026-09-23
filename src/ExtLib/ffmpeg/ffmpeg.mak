@@ -35,7 +35,7 @@ CFLAGS = -I. -Icompat/atomics/win32 -Icompat/windows \
 	   -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DOPJ_STATIC \
 	   -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -DWIN32_LEAN_AND_MEAN \
 	   -fomit-frame-pointer -std=c17 \
-	   -fno-common -fno-ident -mthreads -Wno-discarded-qualifiers
+	   -fno-common -fno-ident -mthreads -Wno-discarded-qualifiers -Wno-incompatible-pointer-types
 
 NASMFLAGS = -I. -Pconfig.asm
 
@@ -47,7 +47,7 @@ ifeq ($(64BIT),yes)
 	NASMFLAGS  += -f win64 -DWIN64=1 -DARCH_X86_32=0 -DARCH_X86_64=1 -DPIC
 else
 	TARGET_OS   = i686-w64-mingw32
-	CFLAGS     += -DWIN32 -D_WIN32 -DARCH_X86_32 -Wno-incompatible-pointer-types
+	CFLAGS     += -DWIN32 -D_WIN32 -DARCH_X86_32
 	OPTFLAGS    = -m32 -march=i686 -msse -msse2 -mfpmath=sse -mstackrealign
 	NASMFLAGS  += -f win32 -DWIN32=1 -DARCH_X86_32=1 -DARCH_X86_64=0 -DPREFIX
 endif
@@ -147,6 +147,7 @@ SRCS_LC = \
 	libavcodec/atrac3plusdsp.c \
 	libavcodec/atrac9dec.c \
 	libavcodec/atsc_a53.c \
+	libavcodec/audio_frame_queue.c \
 	libavcodec/audiodsp.c \
 	libavcodec/av1_parse.c \
 	libavcodec/av1_parser.c \
@@ -261,7 +262,6 @@ SRCS_LC = \
 	libavcodec/float_fmul_reverse.c \
 	libavcodec/float2half.c \
 	libavcodec/flvdec.c \
-	libavcodec/fmtconvert.c \
 	libavcodec/frame_thread_encoder.c \
 	libavcodec/fraps.c \
 	libavcodec/g2meet.c \
@@ -523,7 +523,6 @@ SRCS_LC_B = \
 	libavcodec/utvideodsp.c \
 	libavcodec/utils.c \
 	libavcodec/v210dec.c \
-	libavcodec/v410dec.c \
 	libavcodec/vc1.c \
 	libavcodec/vc1_block.c \
 	libavcodec/vc1_loopfilter.c \
@@ -630,7 +629,6 @@ SRCS_LC_B = \
 	libavcodec/x86/fdct.c \
 	libavcodec/x86/fdctdsp_init.c \
 	libavcodec/x86/flacdsp_init.c \
-	libavcodec/x86/fmtconvert_init.c \
 	libavcodec/x86/h263dsp_init.c \
 	libavcodec/x86/h264_cabac.c \
 	libavcodec/x86/h264_intrapred_init.c \
@@ -678,8 +676,7 @@ SRCS_LC_B = \
 	libavcodec/x86/h26x/h2656dsp.c \
 	\
 	libavcodec/x86/hevc/dsp_init.c \
-	libavcodec/x86/hevc/patch_idct_intrinsic.c \
-	libavcodec/x86/hevc/patch_intra_intrinsic.c \
+	libavcodec/x86/hevc/pred_init.c \
 	\
 	libavcodec/x86/vvc/dsp_init.c
 
@@ -809,6 +806,7 @@ SRCS_LU = \
 SRCS_LR = \
 	libswresample/audioconvert.c \
 	libswresample/dither.c\
+	libswresample/dsd2pcm.c\
 	libswresample/options.c \
 	libswresample/rematrix.c \
 	libswresample/resample.c \
@@ -833,6 +831,7 @@ SRCS_LS = \
 	libswscale/hscale.c \
 	libswscale/hscale_fast_bilinear.c \
 	libswscale/input.c \
+	libswscale/jit.c \
 	libswscale/lut3d.c \
 	libswscale/options.c \
 	libswscale/output.c \
@@ -865,7 +864,6 @@ SRCS_ASM_LC = \
 	libavcodec/x86/dirac_dwt.asm \
 	libavcodec/x86/diracdsp.asm \
 	libavcodec/x86/flacdsp.asm \
-	libavcodec/x86/fmtconvert.asm \
 	libavcodec/x86/fpel.asm \
 	libavcodec/x86/h263_loopfilter.asm \
 	libavcodec/x86/h264_chromamc.asm \
@@ -906,6 +904,7 @@ SRCS_ASM_LC = \
 	libavcodec/x86/ttadsp.asm \
 	libavcodec/x86/utvideodsp.asm \
 	libavcodec/x86/v210.asm \
+	libavcodec/x86/vc1dsp_inv_trans.asm \
 	libavcodec/x86/vc1dsp_loopfilter.asm \
 	libavcodec/x86/vc1dsp_mc.asm \
 	libavcodec/x86/videodsp.asm \
@@ -934,6 +933,7 @@ SRCS_ASM_LC = \
 	libavcodec/x86/hevc/dequant.asm \
 	libavcodec/x86/hevc/idct.asm \
 	libavcodec/x86/hevc/mc.asm \
+	libavcodec/x86/hevc/pred.asm \
 	libavcodec/x86/hevc/sao.asm \
 	libavcodec/x86/hevc/sao_10bit.asm \
 	\
