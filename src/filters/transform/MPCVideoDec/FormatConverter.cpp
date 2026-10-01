@@ -74,21 +74,17 @@ const SW_OUT_FMT* GetSWOF(int pixfmt)
 
 LPCWSTR GetChromaSubsamplingStr(AVPixelFormat av_pix_fmt)
 {
-	int h_shift, v_shift;
+	const AVPixFmtDescriptor* pfdesc = av_pix_fmt_desc_get(av_pix_fmt);
+	if (pfdesc && pfdesc->nb_components >= 3) {
+		unsigned chroma_sub_sample = ((unsigned)pfdesc->log2_chroma_w << 8) + pfdesc->log2_chroma_h;
 
-	if (0 == av_pix_fmt_get_chroma_sub_sample(av_pix_fmt, &h_shift, &v_shift)) {
-		if (h_shift == 0 && v_shift == 0) {
-			return L"4:4:4";
-		} else if (h_shift == 0 && v_shift == 1) {
-			return L"4:4:0";
-		} else if (h_shift == 1 && v_shift == 0) {
-			return L"4:2:2";
-		} else if (h_shift == 1 && v_shift == 1) {
-			return L"4:2:0";
-		} else if (h_shift == 2 && v_shift == 0) {
-			return L"4:1:1";
-		} else if (h_shift == 2 && v_shift == 2) {
-			return L"4:1:0";
+		switch (chroma_sub_sample) {
+		case 0x0000: return L"4:4:4";
+		case 0x0001: return L"4:4:0";
+		case 0x0100: return L"4:2:2";
+		case 0x0101: return L"4:2:0";
+		case 0x0200: return L"4:1:1";
+		case 0x0202: return L"4:1:0";
 		}
 	}
 
@@ -137,47 +133,79 @@ MPCPixelFormat GetPixFormat(DWORD biCompression)
 
 MPCPixFmtType GetPixFmtType(AVPixelFormat av_pix_fmt)
 {
-	const AVPixFmtDescriptor* pfdesc = av_pix_fmt_desc_get(av_pix_fmt);
-	if (!pfdesc) {
-		return PFType_unspecified;
-	}
-
 	switch (av_pix_fmt) {
+	case AV_PIX_FMT_YUV420P:
+	case AV_PIX_FMT_YUVJ420P:
+		return PFType_YUV420;
+
+	case AV_PIX_FMT_YUV422P:
+	case AV_PIX_FMT_YUVJ422P:
+		return PFType_YUV422;
+
+	case AV_PIX_FMT_YUV444P:
+	case AV_PIX_FMT_YUVJ444P:
+		return PFType_YUV444;
+
+	case AV_PIX_FMT_YUV420P9LE:
+	case AV_PIX_FMT_YUV420P10LE:
+	case AV_PIX_FMT_YUV420P12LE:
+	case AV_PIX_FMT_YUV420P14LE:
+	case AV_PIX_FMT_YUV420P16LE:
+	case AV_PIX_FMT_YUVA420P9LE:
+	case AV_PIX_FMT_YUVA420P10LE:
+	case AV_PIX_FMT_YUVA420P16LE:
+		return PFType_YUV420Px;
+
+	case AV_PIX_FMT_YUV422P9LE:
+	case AV_PIX_FMT_YUV422P10LE:
+	case AV_PIX_FMT_YUV422P12LE:
+	case AV_PIX_FMT_YUV422P14LE:
+	case AV_PIX_FMT_YUV422P16LE:
+	case AV_PIX_FMT_YUVA422P9LE:
+	case AV_PIX_FMT_YUVA422P10LE:
+	case AV_PIX_FMT_YUVA422P12LE:
+	case AV_PIX_FMT_YUVA422P16LE:
+		return PFType_YUV422Px;
+
+	case AV_PIX_FMT_YUV444P9LE:
+	case AV_PIX_FMT_YUV444P10LE:
+	case AV_PIX_FMT_YUV444P12LE:
+	case AV_PIX_FMT_YUV444P14LE:
+	case AV_PIX_FMT_YUV444P16LE:
+	case AV_PIX_FMT_YUVA444P9LE:
+	case AV_PIX_FMT_YUVA444P10LE:
+	case AV_PIX_FMT_YUVA444P12LE:
+	case AV_PIX_FMT_YUVA444P16LE:
+		return PFType_YUV444Px;
+
 	case AV_PIX_FMT_NV12:
 		return PFType_NV12;
-	case AV_PIX_FMT_P010:
-	case AV_PIX_FMT_P012:
-	case AV_PIX_FMT_P016:
+
+	case AV_PIX_FMT_P010LE:
+	case AV_PIX_FMT_P012LE:
+	case AV_PIX_FMT_P016LE:
 		return PFType_P01x;
-	case AV_PIX_FMT_Y210:
-	case AV_PIX_FMT_Y212 :
-	case AV_PIX_FMT_Y216:
+
+	case AV_PIX_FMT_P210LE:
+	case AV_PIX_FMT_P212LE:
+	case AV_PIX_FMT_P216LE:
+		return PFType_P21x;
+
+	case AV_PIX_FMT_P410LE:
+	case AV_PIX_FMT_P412LE:
+	case AV_PIX_FMT_P416LE:
+		return PFType_P41x;
+
+	case AV_PIX_FMT_Y210LE:
+	case AV_PIX_FMT_Y212LE:
+	case AV_PIX_FMT_Y216LE:
 		return PFType_Y21x;
 	}
 
-	int lumabits = pfdesc->comp[0].depth;
-
-	if (pfdesc->flags & (AV_PIX_FMT_FLAG_RGB|AV_PIX_FMT_FLAG_PAL)) {
-		return PFType_RGB;
-	}
-
-	if (lumabits < 8 || lumabits > 16 || pfdesc->nb_components != 3 + (pfdesc->flags & AV_PIX_FMT_FLAG_ALPHA ? 1 : 0)) {
-		return PFType_unspecified;
-	}
-
-	if ((pfdesc->flags & ~AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_PLANAR) {
-		// must be planar type, ignore alpha channel, other flags are forbidden
-
-		if (pfdesc->log2_chroma_w == 1 && pfdesc->log2_chroma_h == 1) {
-			return lumabits == 8 ? PFType_YUV420 : PFType_YUV420Px;
-		}
-
-		if (pfdesc->log2_chroma_w == 1 && pfdesc->log2_chroma_h == 0) {
-			return lumabits == 8 ? PFType_YUV422 : PFType_YUV422Px;
-		}
-
-		if (pfdesc->log2_chroma_w == 0 && pfdesc->log2_chroma_h == 0) {
-			return lumabits == 8 ? PFType_YUV444 : PFType_YUV444Px;
+	const AVPixFmtDescriptor* pfdesc = av_pix_fmt_desc_get(av_pix_fmt);
+	if (pfdesc) {
+		if (pfdesc->flags & (AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL)) {
+			return PFType_RGB;
 		}
 	}
 
@@ -324,12 +352,6 @@ void CFormatConverter::SetConvertFunc()
 		}
 	}
 
-	if (m_pConvertFn) {
-		return;
-	}
-
-	m_pConvertFn = &CFormatConverter::ConvertGeneric;
-
 	// optimized function
 	switch (m_out_pixfmt) {
 	case PixFmt_NV12:
@@ -465,6 +487,15 @@ void CFormatConverter::SetConvertFunc()
 		}
 		break;
 	}
+
+	if (m_pConvertFn) {
+		DLog("CFormatConverter::SetConvertFunc : optimized function has been selected");
+		return;
+	}
+
+	m_pConvertFn = &CFormatConverter::ConvertGeneric;
+
+	DLog("CFormatConverter::SetConvertFunc : swscale has been selected");
 }
 
 void CFormatConverter::UpdateOutput(MPCPixelFormat out_pixfmt, int dstStride, int planeHeight)
@@ -627,11 +658,13 @@ bool CFormatConverter::FormatChanged(AVPixelFormat* fmt1, AVPixelFormat* fmt2)
 
 bool CFormatConverter::DirectCopyPossible(const AVPixelFormat avformat)
 {
-	return avformat == AV_PIX_FMT_NV12      && m_out_pixfmt == PixFmt_NV12 ||
-		   avformat == AV_PIX_FMT_P010      && m_out_pixfmt == PixFmt_P010 ||
-		   avformat == AV_PIX_FMT_P016      && m_out_pixfmt == PixFmt_P016 ||
-		   avformat == AV_PIX_FMT_YUV444P   && m_out_pixfmt == PixFmt_YV24 ||
-		   avformat == AV_PIX_FMT_YUV444P16 && m_out_pixfmt == PixFmt_YUV444P16;
+	return avformat == AV_PIX_FMT_NV12        && m_out_pixfmt == PixFmt_NV12 ||
+		   avformat == AV_PIX_FMT_P010LE      && m_out_pixfmt == PixFmt_P010 ||
+		   avformat == AV_PIX_FMT_P016LE      && m_out_pixfmt == PixFmt_P016 ||
+		   avformat == AV_PIX_FMT_P210LE      && m_out_pixfmt == PixFmt_P210 ||
+		   avformat == AV_PIX_FMT_P212LE      && m_out_pixfmt == PixFmt_P216 ||
+		   avformat == AV_PIX_FMT_YUV444P     && m_out_pixfmt == PixFmt_YV24 ||
+		   avformat == AV_PIX_FMT_YUV444P16LE && m_out_pixfmt == PixFmt_YUV444P16;
 }
 
 void CFormatConverter::Clear()
