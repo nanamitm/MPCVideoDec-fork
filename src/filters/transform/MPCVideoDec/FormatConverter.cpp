@@ -562,7 +562,7 @@ bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame)
 		srcStride[i] = pFrame->linesize[i];
 	}
 
-	uint8_t* srcData[4];
+	const uint8_t* srcData[4];
 	for (int i = 0; i < 4; i++) {
 		srcData[i] = pFrame->data[i];
 	}
@@ -570,7 +570,7 @@ bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame)
 	return Converting(dst, pFrame, srcData, srcStride);
 }
 
-bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame, const uint8_t* const srcData[4], const ptrdiff_t srcStride[4])
+bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame, const uint8_t* (&srcData)[4], const ptrdiff_t(&srcStride)[4])
 {
 	if (!dst || !pFrame || !srcData[0]) {
 		DLog(L"FormatConverter::Converting() - null dst or frame plane, skipping");
