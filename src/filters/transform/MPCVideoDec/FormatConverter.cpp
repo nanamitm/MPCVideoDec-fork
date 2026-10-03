@@ -553,7 +553,26 @@ void CFormatConverter::SetOptions(const int rgblevels)
 
 bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame)
 {
-	if (!dst || !pFrame || !pFrame->data[0]) {
+	if (!pFrame) {
+		return false;
+	}
+
+	ptrdiff_t srcStride[4];
+	for (int i = 0; i < 4; i++) {
+		srcStride[i] = pFrame->linesize[i];
+	}
+
+	uint8_t* srcData[4];
+	for (int i = 0; i < 4; i++) {
+		srcData[i] = pFrame->data[i];
+	}
+
+	return Converting(dst, pFrame, srcData, srcStride);
+}
+
+bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame, const uint8_t* const srcData[4], const ptrdiff_t srcStride[4])
+{
+	if (!dst || !pFrame || !srcData[0]) {
 		DLog(L"FormatConverter::Converting() - null dst or frame plane, skipping");
 		return false;
 	}
@@ -611,12 +630,7 @@ bool CFormatConverter::Converting(BYTE* dst, const AVFrame* pFrame)
 		dstStrideArray[i] = byteStride / swof.planeWidth[i];
 	}
 
-	ptrdiff_t srcStride[4];
-	for (int i = 0; i < 4; i++) {
-		srcStride[i] = pFrame->linesize[i];
-	}
-
-	(this->*m_pConvertFn)(pFrame->data, srcStride, dstArray, m_FProps.width, m_FProps.height, dstStrideArray);
+	(this->*m_pConvertFn)(srcData, srcStride, dstArray, m_FProps.width, m_FProps.height, dstStrideArray);
 
 	if (out != dst) {
 		int line = 0;
