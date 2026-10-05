@@ -2198,7 +2198,7 @@ HRESULT CMPCVideoDecFilter::SetMediaType(PIN_DIRECTION direction, const CMediaTy
 		if (!bihOut) {
 			return E_FAIL;
 		}
-		m_FormatConverter.UpdateOutput(bihOut);
+		m_FormatConverter.UpdateOutput(m_pOutput->CurrentMediaType().subtype, bihOut);
 
 		m_outputFourcc = bihOut->biCompression;
 		m_outputWidth  = bihOut->biWidth;
