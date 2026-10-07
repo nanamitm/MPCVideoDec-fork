@@ -2196,7 +2196,7 @@ HRESULT CMPCVideoDecFilter::SetMediaType(PIN_DIRECTION direction, const CMediaTy
 		if (!ExtractBIH(&m_pOutput->CurrentMediaType(), &bihOut)) {
 			return E_FAIL;
 		}
-		m_FormatConverter.UpdateOutput2(bihOut.biCompression, bihOut.biWidth, bihOut.biHeight);
+		m_FormatConverter.UpdateOutput2(m_pOutput->CurrentMediaType().subtype, bihOut.biWidth, bihOut.biHeight);
 	}
 
 	return __super::SetMediaType(direction, pmt);
@@ -3469,9 +3469,7 @@ HRESULT CMPCVideoDecFilter::CompleteConnect(PIN_DIRECTION direction, IPin* pRece
 					return hr2;
 				}
 
-				if (hr != VFW_E_TYPE_NOT_ACCEPTED) {
-					ChangeOutputMediaFormat(2);
-				}
+				ChangeOutputMediaFormat(2);
 			}
 		}
 
