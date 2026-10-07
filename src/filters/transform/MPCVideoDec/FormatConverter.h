@@ -22,22 +22,23 @@
 
 #include "IMPCVideoDec.h"
 #include <stdint.h>
+#include <mfobjects.h>
 #include "../BaseVideoFilter/VideoFormats.h"
 
-const MPCPixelFormat YUV420_8[]  = {PixFmt_NV12, PixFmt_YV12, PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_P010, PixFmt_P016, PixFmt_P210, PixFmt_P216, PixFmt_Y410, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_None};
-const MPCPixelFormat YUV422_8[]  = {PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_NV12, PixFmt_YV12, PixFmt_P210, PixFmt_P216, PixFmt_Y410, PixFmt_P010, PixFmt_P016, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_None};
-const MPCPixelFormat YUV444_8[]  = {PixFmt_YV24, PixFmt_AYUV, PixFmt_YUY2, PixFmt_YV16, PixFmt_NV12, PixFmt_YV12, PixFmt_Y410, PixFmt_P210, PixFmt_P216, PixFmt_P010, PixFmt_P016, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_None};
+inline constexpr MPCPixelFormat YUV420_8[]  = {PixFmt_NV12, PixFmt_YV12, PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_P010, PixFmt_P016, PixFmt_P210, PixFmt_P216, PixFmt_Y410, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_None};
+inline constexpr MPCPixelFormat YUV420_10[] = {PixFmt_P010, PixFmt_P016, PixFmt_P210, PixFmt_P216, PixFmt_Y410, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_NV12, PixFmt_YV12, PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_None};
+inline constexpr MPCPixelFormat YUV420_16[] = {PixFmt_P016, PixFmt_P010, PixFmt_P216, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_P210, PixFmt_Y410, PixFmt_NV12, PixFmt_YV12, PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_None};
 
-const MPCPixelFormat YUV420_10[] = {PixFmt_P010, PixFmt_P016, PixFmt_P210, PixFmt_P216, PixFmt_Y410, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_NV12, PixFmt_YV12, PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_None};
-const MPCPixelFormat YUV422_10[] = {PixFmt_P210, PixFmt_P216, PixFmt_YUY2, PixFmt_YV16, PixFmt_Y410, PixFmt_P010, PixFmt_P016, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_YV24, PixFmt_AYUV, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
-const MPCPixelFormat YUV444_10[] = {PixFmt_Y410, PixFmt_YV24, PixFmt_AYUV, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_P210, PixFmt_P216, PixFmt_P010, PixFmt_P016, PixFmt_YUY2, PixFmt_YV16, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
+inline constexpr MPCPixelFormat YUV422_8[]  = {PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_NV12, PixFmt_YV12, PixFmt_P210, PixFmt_P216, PixFmt_Y410, PixFmt_P010, PixFmt_P016, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_None};
+inline constexpr MPCPixelFormat YUV422_10[] = {PixFmt_P210, PixFmt_P216, PixFmt_YUY2, PixFmt_YV16, PixFmt_Y410, PixFmt_P010, PixFmt_P016, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_YV24, PixFmt_AYUV, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
+inline constexpr MPCPixelFormat YUV422_16[] = {PixFmt_P216, PixFmt_P210, PixFmt_YUY2, PixFmt_YV16, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_P016, PixFmt_Y410, PixFmt_P010, PixFmt_YV24, PixFmt_AYUV, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
 
-const MPCPixelFormat YUV420_16[] = {PixFmt_P016, PixFmt_P010, PixFmt_P216, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_P210, PixFmt_Y410, PixFmt_NV12, PixFmt_YV12, PixFmt_YUY2, PixFmt_YV16, PixFmt_YV24, PixFmt_AYUV, PixFmt_None};
-const MPCPixelFormat YUV422_16[] = {PixFmt_P216, PixFmt_P210, PixFmt_YUY2, PixFmt_YV16, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_P016, PixFmt_Y410, PixFmt_P010, PixFmt_YV24, PixFmt_AYUV, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
-const MPCPixelFormat YUV444_16[] = {PixFmt_YUV444P16, PixFmt_Y416, PixFmt_Y410, PixFmt_YV24, PixFmt_AYUV, PixFmt_P216, PixFmt_P016, PixFmt_P210, PixFmt_P010, PixFmt_YUY2, PixFmt_YV16, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
+inline constexpr MPCPixelFormat YUV444_8[]  = {PixFmt_YV24, PixFmt_AYUV, PixFmt_YUY2, PixFmt_YV16, PixFmt_NV12, PixFmt_YV12, PixFmt_Y410, PixFmt_P210, PixFmt_P216, PixFmt_P010, PixFmt_P016, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_None};
+inline constexpr MPCPixelFormat YUV444_10[] = {PixFmt_Y410, PixFmt_YUV444P16, PixFmt_Y416, PixFmt_YV24, PixFmt_AYUV, PixFmt_P210, PixFmt_P216, PixFmt_P010, PixFmt_P016, PixFmt_YUY2, PixFmt_YV16, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
+inline constexpr MPCPixelFormat YUV444_16[] = {PixFmt_YUV444P16, PixFmt_Y416, PixFmt_Y410, PixFmt_YV24, PixFmt_AYUV, PixFmt_P216, PixFmt_P016, PixFmt_P210, PixFmt_P010, PixFmt_YUY2, PixFmt_YV16, PixFmt_NV12, PixFmt_YV12, PixFmt_None};
 
-const MPCPixelFormat RGB_8[]     = {PixFmt_RGB32, PixFmt_RGB48, PixFmt_None};
-const MPCPixelFormat RGB_16[]    = {PixFmt_RGB48, PixFmt_RGB32, PixFmt_None};
+inline constexpr MPCPixelFormat RGB_8[]     = {PixFmt_RGB32, PixFmt_RGB48, PixFmt_None};
+inline constexpr MPCPixelFormat RGB_16[]    = {PixFmt_RGB48, PixFmt_RGB32, PixFmt_None};
 
 struct SW_OUT_FMT {
 	VFormatDesc desc;
@@ -52,6 +53,7 @@ struct SW_OUT_FMT {
 extern const SW_OUT_FMT s_sw_formats[];
 
 const SW_OUT_FMT* GetSWOF(int pixfmt);
+
 LPCWSTR GetChromaSubsamplingStr(enum AVPixelFormat av_pix_fmt);
 int GetLumaBits(enum AVPixelFormat av_pix_fmt);
 
@@ -59,6 +61,7 @@ int GetLumaBits(enum AVPixelFormat av_pix_fmt);
 
 struct AVFrame;
 struct SwsContext;
+struct AVPixFmtDescriptor;
 
 enum MPCPixFmtType {
 	PFType_unspecified,
@@ -81,14 +84,17 @@ enum MPCPixFmtType {
 
 struct FrameProps {
 	// basic properties
-	enum AVPixelFormat	avpixfmt;
-	int					width;
-	int					height;
+	enum AVPixelFormat        avpixfmt;
+	int                       width = 0;
+	int                       height = 0;
 	// additional properties
-	int					lumabits;
-	MPCPixFmtType		pftype;
-	enum AVColorSpace	colorspace;
-	enum AVColorRange	colorrange;
+	const AVPixFmtDescriptor* avpfdesc = nullptr;
+	int                       lumabits = 0;
+	MPCPixFmtType             pftype = PFType_unspecified;
+	enum AVColorSpace         colorspace;
+	enum AVColorRange         colorrange;
+
+	FrameProps();
 };
 
 MPCPixFmtType GetPixFmtType(enum AVPixelFormat av_pix_fmt);
@@ -109,8 +115,7 @@ typedef int (__stdcall *YUVRGBConversionFunc)(const uint8_t *srcY, const uint8_t
 
 class CFormatConverter
 {
-
-protected:
+private:
 	SwsContext*		m_pSwsContext = nullptr;
 	FrameProps		m_FProps;
 
@@ -122,14 +127,17 @@ protected:
 	int				m_planeHeight = 0;
 	int				m_OutHeight   = 0;
 
-	size_t			m_nAlignedBufferSize = 0;
-	uint8_t*		m_pAlignedBuffer = nullptr;
+	void*			m_pTempBuffer = nullptr;
+	size_t			m_nTempBufferSize = 0;
 
 	int				m_nCPUFlag = 0;
 
 	unsigned		m_RequiredAlignment = 0;
 
 	int				m_NumThreads = 1;
+
+	// allocates an aligned buffer with padding
+	void* GetTempBuffer(const size_t size);
 
 	bool InitSWSContext();
 	void UpdateSWSContext();
@@ -195,20 +203,19 @@ public:
 	CFormatConverter();
 	~CFormatConverter();
 
-	void UpdateOutput(MPCPixelFormat out_pixfmt, int dstStride, int planeHeight);
-	void UpdateOutput2(GUID subtype, LONG biWidth, LONG biHeight);
-	void SetOptions(int rgblevels);
+	void UpdateOutput(const GUID& subtype, const BITMAPINFOHEADER* pBIH);
+	void SetOptions(const int rgblevels);
 
 	MPCPixelFormat GetOutPixFormat() { return m_out_pixfmt; }
 
-	bool Converting(BYTE* dst, AVFrame* pFrame);
-	void SetDirect(BOOL bDirect) { m_bDirect = bDirect; }
+	bool Converting(BYTE* dst, const AVFrame* pFrame);
+	bool Converting(BYTE* dst, const AVFrame* pFrame, const uint8_t* (&srcData)[4], const ptrdiff_t (&srcStride)[4]);
+
+	void SetDirect(const BOOL bDirect) { m_bDirect = bDirect; }
 
 	void Cleanup();
 
-	bool FormatChanged(AVPixelFormat* fmt1, AVPixelFormat* fmt2);
-
-	bool DirectCopyPossible(AVPixelFormat avformat);
+	bool FormatChanged(const AVPixelFormat fmt1, const AVPixelFormat fmt2) const;
 
 	int GetDstStride() const { return m_dstStride; }
 

@@ -2194,11 +2194,14 @@ HRESULT CMPCVideoDecFilter::SetMediaType(PIN_DIRECTION direction, const CMediaTy
 		m_bDecoderAcceptFormat = FALSE;
 		m_pCurrentMediaType    = *pmt;
 	} else if (direction == PINDIR_OUTPUT) {
-		BITMAPINFOHEADER bihOut;
-		if (!ExtractBIH(&m_pOutput->CurrentMediaType(), &bihOut)) {
+		const BITMAPINFOHEADER* bihOut = GetBitmapInfoHeader(&m_pOutput->CurrentMediaType());
+		if (!bihOut) {
 			return E_FAIL;
 		}
-		m_FormatConverter.UpdateOutput2(m_pOutput->CurrentMediaType().subtype, bihOut.biWidth, bihOut.biHeight);
+		m_FormatConverter.UpdateOutput(m_pOutput->CurrentMediaType().subtype, bihOut);
+
+		m_outputFourcc = bihOut->biCompression;
+		m_outputWidth  = bihOut->biWidth;
 	}
 
 	return __super::SetMediaType(direction, pmt);
@@ -2376,6 +2379,22 @@ bool CMPCVideoDecFilter::CheckDXVACompatible(const enum AVCodecID codec, const e
 	}
 
 	return true;
+}
+
+bool CMPCVideoDecFilter::DirectCopyPossible(const AVPixelFormat avformat) const
+{
+	return
+		avformat == AV_PIX_FMT_NV12           && m_outputFourcc == FCC('NV12') ||
+		avformat == AV_PIX_FMT_P010LE         && m_outputFourcc == FCC('P010') ||
+		avformat == AV_PIX_FMT_P012LE         && m_outputFourcc == FCC('P016') ||
+		avformat == AV_PIX_FMT_P016LE         && m_outputFourcc == FCC('P016') ||
+		avformat == AV_PIX_FMT_NV16           && m_outputFourcc == FCC('NV16') ||
+		avformat == AV_PIX_FMT_P210LE         && m_outputFourcc == FCC('P210') ||
+		avformat == AV_PIX_FMT_P212LE         && m_outputFourcc == FCC('P216') ||
+		avformat == AV_PIX_FMT_YUV444P        && m_outputFourcc == FCC('YV24') ||
+		avformat == AV_PIX_FMT_YUV444P10MSBLE && m_outputFourcc == MAKEFOURCC('Y','3',0,16) ||
+		avformat == AV_PIX_FMT_YUV444P12MSBLE && m_outputFourcc == MAKEFOURCC('Y','3',0,16) ||
+		avformat == AV_PIX_FMT_YUV444P16LE    && m_outputFourcc == MAKEFOURCC('Y','3',0,16);
 }
 
 HRESULT CMPCVideoDecFilter::InitDecoder(const CMediaType* pmt)
@@ -3025,6 +3044,10 @@ void CMPCVideoDecFilter::BuildOutputFormat()
 			case AV_PIX_FMT_YUV420P10LE: m_VideoOutputFormats.emplace_back(DXVA_P010); break;
 			}
 		}
+	}
+
+	if (m_hwType == HwType::NVDEC && pix_fmt == AV_PIX_FMT_YUV422P) {
+		m_VideoOutputFormats.emplace_back(VFormat_NV16);
 	}
 
 	// Software rendering
@@ -4175,7 +4198,7 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 					continue;
 				}
 			}
-			else if (frames_ctx->format == AV_PIX_FMT_CUDA && m_FormatConverter.DirectCopyPossible(frames_ctx->sw_format)) {
+			else if (frames_ctx->format == AV_PIX_FMT_CUDA && DirectCopyPossible(frames_ctx->sw_format)) {
 				auto device_hwctx = reinterpret_cast<AVHWDeviceContext*>(frames_ctx->device_ctx);
 				auto cuda_hwctx = reinterpret_cast<cuda::AVCUDADeviceContext*>(device_hwctx->hwctx);
 				auto cuda_fns = cuda_hwctx->internal->cuda_dl;
@@ -4187,14 +4210,14 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 					continue;
 				}
 				int linesize[4] = {};
-				av_image_fill_linesizes(linesize, frames_ctx->sw_format, m_FormatConverter.GetDstStride());
+				av_image_fill_linesizes(linesize, frames_ctx->sw_format, m_outputWidth);
 
 				int h_shift = 0, v_shift = 0;
 				av_pix_fmt_get_chroma_sub_sample(frames_ctx->sw_format, &h_shift, &v_shift);
 
 				uint8_t* hwdata[4];
 				memcpy(hwdata, m_pHWFrame->data, sizeof(hwdata)); // copy 4 pointers from 8 (AV_NUM_DATA_POINTERS)
-				if (m_FormatConverter.GetOutPixFormat() == PixFmt_YV24) {
+				if (m_outputFourcc == FCC('YV24')) {
 					std::swap(hwdata[1], hwdata[2]); // swap UV when YUV444P to YV24
 				}
 
@@ -4230,6 +4253,7 @@ HRESULT CMPCVideoDecFilter::DecodeInternal(AVPacket *avpkt, REFERENCE_TIME rtSta
 				cuda_fns->cuStreamSynchronize(cuda_hwctx->stream);
 				cuda_fns->cuCtxPopCurrent(nullptr);
 			} else {
+				av_frame_unref(m_pFrame);
 				ret = av_hwframe_transfer_data(m_pFrame, m_pHWFrame, 0);
 				if (ret < 0) {
 					av_frame_unref(frame);
