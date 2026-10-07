@@ -590,6 +590,7 @@ FFMPEG_CODECS ffCodecs[] = {
 	// AV1
 	{ &MEDIASUBTYPE_AV01, AV_CODEC_ID_AV1, VDEC_AV1, HWCodec_AV1 },
 	{ &MEDIASUBTYPE_av01, AV_CODEC_ID_AV1, VDEC_AV1, HWCodec_AV1 },
+	{ &MEDIASUBTYPE_dav1, AV_CODEC_ID_AV1, VDEC_AV1, HWCodec_AV1 },
 
 	// SpeedHQ
 	{ &MEDIASUBTYPE_SHQ0, AV_CODEC_ID_SPEEDHQ, VDEC_SHQ, HWCodec_None },
@@ -976,6 +977,7 @@ const AMOVIESETUP_MEDIATYPE sudPinTypesIn[] = {
 	// AV1
 	{ &MEDIATYPE_Video, &MEDIASUBTYPE_AV01 },
 	{ &MEDIATYPE_Video, &MEDIASUBTYPE_av01 },
+	{ &MEDIATYPE_Video, &MEDIASUBTYPE_dav1 },
 
 	// SpeedHQ
 	{ &MEDIATYPE_Video, &MEDIASUBTYPE_SHQ0 },
@@ -2270,7 +2272,7 @@ HRESULT CMPCVideoDecFilter::FindDecoderConfiguration()
 
 					if (DXVA2_H264_VLD_Intel == guid) {
 						const int width_mbs  = m_nSurfaceWidth / 16;
-						const int height_mbs = m_nSurfaceWidth / 16;
+						const int height_mbs = m_nSurfaceHeight / 16;
 						const int max_ref_frames_dpb41 = std::min(11, 32768 / (width_mbs * height_mbs));
 						if (m_pAVCtx->refs > max_ref_frames_dpb41) {
 							DLog(L"    => Too many reference frames for Intel H.264 ClearVideo decoder, skip");
@@ -2340,7 +2342,6 @@ bool CMPCVideoDecFilter::CheckDXVACompatible(const enum AVCodecID codec, const e
 			if (profile == AV_PROFILE_HEVC_REXT && (m_hwType == HwType::D3D11 || m_hwType == HwType::NVDEC || m_hwType == HwType::D3D11CopyBack)) {
 				return true;
 			}
-
 			if (pix_fmt != AV_PIX_FMT_YUV420P && pix_fmt != AV_PIX_FMT_YUVJ420P && pix_fmt != AV_PIX_FMT_YUV420P10) {
 				return false;
 			}
@@ -2349,6 +2350,9 @@ bool CMPCVideoDecFilter::CheckDXVACompatible(const enum AVCodecID codec, const e
 			}
 			break;
 		case AV_CODEC_ID_VP9:
+			if (m_hwType == HwType::NVDEC && pix_fmt == AV_PIX_FMT_YUV420P12) {
+				return true;
+			}
 			if (pix_fmt != AV_PIX_FMT_YUV420P && pix_fmt != AV_PIX_FMT_YUVJ420P && pix_fmt != AV_PIX_FMT_YUV420P10) {
 				return false;
 			}
@@ -3764,9 +3768,11 @@ DXVA2_ExtendedFormat CMPCVideoDecFilter::GetDXVA2ExtendedFormat(const AVCodecCon
 	switch(color_trc) {
 		case AVCOL_TRC_BT709:
 		case AVCOL_TRC_SMPTE170M:
+			fmt.VideoTransferFunction = DXVA2_VideoTransFunc_709;
+			break;
 		case AVCOL_TRC_BT2020_10:
 		case AVCOL_TRC_BT2020_12:
-			fmt.VideoTransferFunction = DXVA2_VideoTransFunc_709;
+			fmt.VideoTransferFunction = (colorspace == AVCOL_SPC_BT2020_CL) ? MFVideoTransFunc_2020_const : MFVideoTransFunc_2020;
 			break;
 		case AVCOL_TRC_GAMMA22:
 			fmt.VideoTransferFunction = DXVA2_VideoTransFunc_22;
@@ -4482,35 +4488,38 @@ void CMPCVideoDecFilter::SetDXVAState()
 {
 	CString codec;
 	switch (m_CodecId) {
-	case AV_CODEC_ID_AV1:        codec = L"AV1";    break;
-	case AV_CODEC_ID_H264:       codec = L"H.264";  break;
-	case AV_CODEC_ID_HEVC:       codec = L"HEVC";   break;
 	case AV_CODEC_ID_MPEG2VIDEO: codec = L"MPEG-2"; break;
+	case AV_CODEC_ID_H264:       codec = L"H.264";  break;
 	case AV_CODEC_ID_VC1:
 	case AV_CODEC_ID_WMV3:       codec = L"VC-1";   break;
 	case AV_CODEC_ID_VP9:        codec = L"VP9";    break;
+	case AV_CODEC_ID_HEVC:       codec = L"HEVC";   break;
+	case AV_CODEC_ID_AV1:        codec = L"AV1";    break;
 	}
 
 	auto frames_ctx = reinterpret_cast<AVHWFramesContext*>(m_pHWFrame->hw_frames_ctx->data);
 
-	CString description = m_hwType == HwType::D3D11CopyBack ? L"D3D11 Copy-back" :
-		(m_hwType == HwType::D3D12CopyBack ? L"D3D12 Copy-back" : L"NVDEC");
+	CString description =
+		(m_hwType == HwType::D3D11CopyBack) ? L"D3D11 Copy-back" :
+		(m_hwType == HwType::D3D12CopyBack) ? L"D3D12 Copy-back" :
+		L"NVDEC";
+
 	if (!codec.IsEmpty()) {
-		if (m_hwType == HwType::NVDEC) {
-			if (frames_ctx->sw_format == AV_PIX_FMT_YUV444P || frames_ctx->sw_format == AV_PIX_FMT_YUV444P16) {
-				codec.Append(L" 444");
-			}
-		}
-		else if (m_hwType == HwType::D3D11CopyBack) {
+		if (m_hwType != HwType::None) {
 			switch (frames_ctx->sw_format) {
 			case AV_PIX_FMT_YUYV422:
-			case AV_PIX_FMT_Y210:
-			case AV_PIX_FMT_Y212:
+			case AV_PIX_FMT_NV16:
+			case AV_PIX_FMT_Y210LE:
+			case AV_PIX_FMT_Y212LE:
 				codec.Append(L" 422");
 				break;
+			case AV_PIX_FMT_YUV444P:
+			case AV_PIX_FMT_YUV444P16LE:
 			case AV_PIX_FMT_VUYX:
-			case AV_PIX_FMT_XV30:
-			case AV_PIX_FMT_XV36:
+			case AV_PIX_FMT_XV30LE:
+			case AV_PIX_FMT_XV36LE:
+			case AV_PIX_FMT_YUV444P10MSBLE:
+			case AV_PIX_FMT_YUV444P12MSBLE:
 				codec.Append(L" 444");
 				break;
 			}
