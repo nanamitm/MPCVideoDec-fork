@@ -509,9 +509,9 @@ void CFormatConverter::UpdateOutput(MPCPixelFormat out_pixfmt, int dstStride, in
 	m_planeHeight = planeHeight;
 }
 
-void CFormatConverter::UpdateOutput2(GUID subtype, LONG biWidth, LONG biHeight)
+void CFormatConverter::UpdateOutput2(DWORD biCompression, LONG biWidth, LONG biHeight)
 {
-	UpdateOutput(GetPixFormat(subtype), biWidth, abs(biHeight));
+	UpdateOutput(GetPixFormat(biCompression), biWidth, abs(biHeight));
 
 	m_OutHeight = biHeight;
 }
