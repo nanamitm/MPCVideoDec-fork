@@ -9,6 +9,8 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release Filter|x64'">$(SolutionDir)_bin\Filters_x64\</OutDir>
     <LinkIncremental Condition="$(Configuration.Contains('Debug'))">true</LinkIncremental>
     <LinkIncremental Condition="$(Configuration.Contains('Release'))">false</LinkIncremental>
+    <!-- Don't let a user-wide "vcpkg integrate install" auto-link vcpkg's FFmpeg import libs -->
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
